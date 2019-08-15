@@ -2,6 +2,7 @@
 # -*- coding: utf8 -*-
 
 from data_access import confmgr
+from manager import wifiManager
 
 wifi_list = [
     {
@@ -71,5 +72,5 @@ def update_wifi_info(w_info):
 
 
 def get_available_wifi_list():
-    # TODO: call external API to get available wifi list
-    return True, wifi_list
+    wifiManager.wifiInit()
+    return True, wifiManager.wifiScan()
