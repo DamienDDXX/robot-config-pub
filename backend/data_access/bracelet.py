@@ -1,17 +1,19 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 
+import platform
 from data_access import confmgr
+from manager import bandManager
 
 scanned_bracelet_list = [
     {
-        'mac': '5CEA1D8CAAE4'
+        'mac': '6F361196FED7'
+    },
+    {
+        'mac': 'A58F537200F1'
     },
     {
         'mac': 'EEEE1D8CAAE4'
-    },
-    {
-        'mac': '5CEA1D8CEEEE'
     }
 ]
 
@@ -100,4 +102,9 @@ def delete_bracelet(bracelet_id):
 
 
 def get_scanned_bracelet_list():
-    return True, scanned_bracelet_list
+    if platform.system().lower() == 'windows':
+        return True, scanned_bracelet_list
+    elif platform.system().lower() == 'linux':
+        return True, bandManager.bandScan()
+    else:
+        return True, []
