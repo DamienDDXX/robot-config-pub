@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf8 -*-
+
 from data_access import confmgr
 
 scanned_bracelet_list = [

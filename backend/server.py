@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf8 -*-
+
 from flask import Flask, request, jsonify, render_template
 from data_access import device, server, wifi, bracelet, settings, test_func
 import os

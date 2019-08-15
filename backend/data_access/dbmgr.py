@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf8 -*-
+
 import configparser
 import os
 from mysql.connector import connect
