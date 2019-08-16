@@ -5,19 +5,8 @@ import platform
 from data_access import confmgr
 from manager import bandManager
 
-scanned_bracelet_list = [
-    {
-        'mac': '6F361196FED7'
-    },
-    {
-        'mac': 'A58F537200F1'
-    },
-    {
-        'mac': 'EEEE1D8CAAE4'
-    }
-]
 
-
+# 获取手环配置列表
 def get_configured_bracelet_list():
     bracelet_conf, _ = confmgr.get_conf_section('BRACELET')
     bracelet1 = bracelet_conf['bracelet1']
@@ -36,7 +25,7 @@ def get_configured_bracelet_list():
     return True, bracelet_list
 
 
-# not used yet
+# 获取指定的手环信息
 def get_bracelet_info(bracelet_id):
     if bracelet_id > 2:
         return False, 'not found'
@@ -53,6 +42,7 @@ def get_bracelet_info(bracelet_id):
     return False, 'not found'
 
 
+# 重新配置手环信息
 def update_bracelet_info(bracelet_id, mac):
     if bracelet_id > 2:
         return False, 'not found'
@@ -65,6 +55,7 @@ def update_bracelet_info(bracelet_id, mac):
     return True, 'updated'
 
 
+# 增加手环配置
 def add_bracelet(mac):
     # 保证先加bracelet1,  然后加bracelet2
     bracelet_conf, conf = confmgr.get_conf_section('BRACELET')
@@ -78,6 +69,7 @@ def add_bracelet(mac):
     return True, 'added'
 
 
+# 删除手环配置
 def delete_bracelet(bracelet_id):
     # conn = dbmgr.get_connection()
     # try:
@@ -101,8 +93,15 @@ def delete_bracelet(bracelet_id):
     return True, 'deleted'
 
 
+# 获取扫描到的手环列表
 def get_scanned_bracelet_list():
     if platform.system().lower() == 'windows':
+        # windows 平台，模拟
+        scanned_bracelet_list = [
+                { 'mac': '6F361196FED7' },
+                { 'mac': 'A58F537200F1' },
+                { 'mac': 'EEEE1D8CAAE4' }
+                ]
         return True, scanned_bracelet_list
     elif platform.system().lower() == 'linux':
         return True, bandManager.bandScan()
