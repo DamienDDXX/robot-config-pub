@@ -5,6 +5,7 @@ import os
 import random
 import platform
 
+from utility import audioRecord
 from manager import mp3Manager
 if platform.system().lower() == 'linux':
     from manager import buttonManager, bandManager
@@ -32,66 +33,53 @@ def exit_radio_test_env():
 
 
 def start_test_radio():
-    mp3_file = os.path.join(base_dir, '..\static\mp3\\bird.wav')
-    mp3Manager.mp3TestStart(mp3_file)
+    audio_file = os.path.join(base_dir, '..\static\mp3\\bird.wav')
+    if os.path.isfile(audio_file):
+        audioRecord.audioPlay(audio_file)
     return True, 'OK'
 
 
 def stop_test_radio():
-    mp3Manager.mp3TestStop()
     return True, 'OK'
 
 
 # audio, 测试麦克风
+def remove_audio_file():
+    audio_file = os.path.join(base_dir, '..\static\mp3\\test.wav')
+    if os.path.isfile(audio_file):
+        try:
+            os.remove(audio_file)
+        except:
+            pass
+    return True, 'OK'
+
+
 def enter_audio_test_env():
-    if platform.system().lower() == 'windows':
-        return True, 'OK'
-    elif platform.system().lower() == 'linux':
-        # TODO
-        return True, 'OK'
-    else:
-        return True, 'OK'
+    remove_audio_file()
+    return True, 'OK'
 
 
 def exit_audio_test_env():
-    if platform.system().lower() == 'windows':
-        return True, 'OK'
-    elif platform.system().lower() == 'linux':
-        # TODO
-        return True, 'OK'
-    else:
-        return True, 'OK'
+    remove_audio_file()
+    return True, 'OK'
 
 
 def start_recording_audio():
-    # start recording audio
-    if platform.system().lower() == 'windows':
-        return True, 'OK'
-    elif platform.system().lower() == 'linux':
-        # TODO
-        return True, 'OK'
-    else:
-        return True, 'OK'
+    remove_audio_file()
+    audio_file = os.path.join(base_dir, '..\static\mp3\\test.wav')
+    audioRecord.audioRecord(audio_file, 5)
+    return True, 'OK'
 
 
 def stop_recording_audio():
-    if platform.system().lower() == 'windows':
-        return True, 'OK'
-    elif platform.system().lower() == 'linux':
-        # TODO
-        return True, 'OK'
-    else:
-        return True, 'OK'
+    return True, 'OK'
 
 
 def play_recorded_audio():
-    if platform.system().lower() == 'windows':
-        return True, 'OK'
-    elif platform.system().lower() == 'linux':
-        # TODO
-        return True, 'OK'
-    else:
-        return True, 'OK'
+    audio_file = os.path.join(base_dir, '..\static\mp3\\test.wav')
+    if os.path.isfile(audio_file):
+        audioRecord.audioPlay(audio_file)
+    return True, 'OK'
 
 
 # monitor, 测试液晶屏

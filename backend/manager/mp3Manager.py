@@ -18,8 +18,7 @@ __all__ = [
         'mp3ListInit',
         'mp3ListUpdateStart',
         'mp3ListUpdateStop'
-        'mp3TestStart'
-        'mp3TestStop'
+        'mp3Test',
         ]
 
 
@@ -67,9 +66,6 @@ _updateStop     = False
 
 _updateThread   = None
 _updateEvent    = None
-
-_testThread     = None
-_testStop       = False
 
 
 # 初始化本地文件播放列表
@@ -363,36 +359,15 @@ def mp3ListPlayThread():
                     _radioPlay = False
 
 
-# mp3 测试线程
-def mp3TestThread(mp3File):
-    global _testThread, _testStop
-    if not _testStop:
-        mixer.init()
-        mixer.music.set_volume(1)
-        mixer.music.load(mp3File)
-        mixer.music.play(start = 0.0)
-        while not _testStop and mixer.music.get_busy():
-            time.sleep(0.5)
-        mixer.music.stop()
-    _testThread = None
-
-
-# 启动 mp3 测试
-def mp3TestStart(mp3File):
-    global _testThread, _testStop
-    if not _testThread:
-        _testStop   = False
-        _testThread = threading.Thread(target = mp3TestThread, args = [mp3File, ])
-        _testThread.start()
-
-
-# 停止 mp3 测试
-def mp3TestStop():
-    global _testThread, _testStop
-    if _testThread:
-        _testStop = True
-        while _testThread:
-            time.sleep(0.5)
+# mp3 测试
+def mp3Test(mp3File):
+    mixer.init()
+    mixer.music.set_volume(1)
+    mixer.music.load(mp3File)
+    mixer.music.play(start = 0.0)
+    while mixer.music.get_busy():
+        time.sleep(0.5)
+    mixer.music.stop()
 
 
 # mp3 管理模块
