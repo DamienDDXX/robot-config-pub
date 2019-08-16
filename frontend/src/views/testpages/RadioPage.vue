@@ -3,7 +3,7 @@
     <h1>测试扬声器</h1>
     <div class="operations">
       <el-button type="primary" @click="onTestBtnClick">测试</el-button>
-      <el-button type="danger" @click="onStopBtnClick">停止</el-button>
+      <el-button v-if="false" type="danger" @click="onStopBtnClick">停止</el-button>
     </div>
   </div>
 </template>

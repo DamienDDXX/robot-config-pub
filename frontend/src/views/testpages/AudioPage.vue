@@ -3,7 +3,7 @@
     <h1>测试麦克风</h1>
     <div class="operations">
       <el-button type="primary" @click="onTestBtnClick" icon="el-icon-microphone">录制</el-button>
-      <el-button type="danger" @click="onStopBtnClick">停止</el-button>
+      <el-button v-if="false" type="danger" @click="onStopBtnClick">停止</el-button>
       <el-button type="success" @click="onPlayBtnClick" icon="el-icon-video-play">播放</el-button>
     </div>
   </div>
