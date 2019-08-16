@@ -11,14 +11,16 @@ if platform.system().lower() == 'linux':
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
+
 # 局部变量
+_buttonArray = []
 _cbButtonPower = None
-_cbButtonMute  = None
-_cbButtonCall  = None
-_cbButtonPlay  = None
+_cbButtonMute = None
+_cbButtonCall = None
+_cbButtonPlay = None
 _cbButtonIncVolume = None
 _cbButtonDecVolume = None
-_buttonArray   = []
+
 
 # radio, 测试扬声器
 def enter_radio_test_env():
@@ -30,7 +32,7 @@ def exit_radio_test_env():
 
 
 def start_test_radio():
-    mp3_file = os.path.join(base_dir, '..\static\mp3\\auto.mp3')
+    mp3_file = os.path.join(base_dir, '..\static\mp3\\bird.wav')
     mp3Manager.mp3TestStart(mp3_file)
     return True, 'OK'
 
