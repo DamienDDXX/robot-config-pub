@@ -1,8 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 
+import os
 import random
+from manager import mp3Manager
 
+base_dir = os.path.dirname(os.path.abspath(__file__))
 
 # radio, 测试扬声器
 def enter_radio_test_env():
@@ -14,12 +17,14 @@ def exit_radio_test_env():
 
 
 def start_test_radio():
-    # play audio
+    mp3_file = os.path.join(base_dir, '..\static\mp3\\auto.mp3')
+    print(mp3_file)
+    mp3Manager.mp3TestStart(mp3_file)
     return True, 'OK'
 
 
 def stop_test_radio():
-    # stop playing audio
+    mp3Manager.mp3TestStop()
     return True, 'OK'
 
 
