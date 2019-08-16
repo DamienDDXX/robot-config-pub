@@ -2,8 +2,8 @@
   <div class="monitor-page">
     <h1>测试液晶屏</h1>
     <div class="operations">
-      <el-button type="primary" @click="onTestBtnClick" icon="el-icon-monitor">测试</el-button>
-      <el-button type="danger" @click="onStopBtnClick">停止</el-button>
+      <el-button type="primary" @click="onTestBtnClick" icon="el-icon-monitor" :loading="isTesting">测试</el-button>
+      <el-button v-if="false" type="danger" @click="onStopBtnClick">停止</el-button>
     </div>
   </div>
 </template>
@@ -12,6 +12,11 @@
 import testQuery from '@/rest/testQuery';
 
 export default {
+  data() {
+    return {
+      isTesting: false
+    };
+  },
   methods: {
     async onStopBtnClick() {
       try {
@@ -29,12 +34,15 @@ export default {
     },
     async onTestBtnClick() {
       try {
+        this.isTesting = true;
         await testQuery.startTestMonitor();
+        this.isTesting = false;
         this.$message({
-          message: '正在测试液晶屏',
+          message: '测试液晶屏成功',
           type: 'success'
         });
       } catch {
+        this.isTesting = false;
         this.$message({
           message: '测试液晶屏失败',
           type: 'error'
