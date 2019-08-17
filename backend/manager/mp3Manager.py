@@ -14,11 +14,11 @@ import traceback
 
 
 __all__ = [
-        'mp3Init'
+        'mp3Init',
         'mp3ListInit',
         'mp3ListUpdateStart',
-        'mp3ListUpdateStop'
-        'mp3Test',
+        'mp3ListUpdateStop',
+        'mp3Test'
         ]
 
 
