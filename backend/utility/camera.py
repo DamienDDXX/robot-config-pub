@@ -10,7 +10,7 @@ import platform
 if platform.system().lower() == 'windows':
     import cv2
 elif platform.system().lower() == 'linux':
-    from picamera import PiCamera
+    import picamera
 else:
     pass
 
