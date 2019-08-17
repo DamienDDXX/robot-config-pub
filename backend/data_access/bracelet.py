@@ -3,7 +3,9 @@
 
 import platform
 from data_access import confmgr
-from manager import bandManager
+
+if platform.system().lower() == 'linux':
+    from manager import bandManager
 
 
 # 获取手环配置列表
@@ -104,6 +106,9 @@ def get_scanned_bracelet_list():
                 ]
         return True, scanned_bracelet_list
     elif platform.system().lower() == 'linux':
-        return True, bandManager.bandScan()
+        bandManager.bandInit()
+        if bandManager.bandScan():
+            return True, bandManager.bandScanResults()
+        return True, []
     else:
         return True, []

@@ -10,6 +10,7 @@ import logging
 __all__ = [
         'bandInit',
         'bandScan',
+        'bandScanResults'
         'bandConnect',
         'bandDisconnect',
         'bandMonitor',
@@ -161,7 +162,7 @@ def onConnTimeout(addr):
 
 # 扫描结束回调函数
 def onScanTimeout():
-    global _scanDone
+    global _scanDone, _bandList
     _scanDone = True
     logging.debug('onScanTimeout().')
     for band in _bandList:
@@ -284,6 +285,12 @@ def bandScan():
     logging.debug('band scan failed.')
     bandError()
     return False
+
+
+# 手环扫描结果
+def bandScanResults():
+    global _bandList
+    return _bandList
 
 
 # 连接手环
@@ -462,15 +469,17 @@ def bandThreadStop():
 
 # 测试程序
 if __name__ == '__main__':
-    global _bandMonitorAddr
+    global _bandMonitorAddr, _bandList
     bandInit()
     try:
         while len(_bandList) == 0:
-        # _bandMonitorAddr = 'D7FE9611366F'
             bandScan()
+        print(bandScanResults())
         bandSetInv(1)
-        bandThreadStart('D7FE9611366F')
-        while True:
-            time.sleep(5)
+        if len(_bandList) > 0:
+            _bandMonitorAddr = _bandList[0]['mac']
+            bandThreadStart(_bandMonitorAddr)
+            while True:
+                time.sleep(5)
     except KeyboardInterrupt:
         bandThreadStop()
