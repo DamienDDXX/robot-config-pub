@@ -14,7 +14,7 @@ from pywifi import const
 __all__ = [
         'wifiInit',
         'wifiScan',
-        'wifiConnect'
+        'wifiConnect',
         'wifiDisonnect'
         ]
 
@@ -34,7 +34,12 @@ def wifiInit():
     logging.debug('wifiInit() start.')
     if not _wifiIFace:
         # 避免重复初始化
-        _wifiIFace = pywifi.PyWiFi().interfaces()[0]
+        if platform.system().lower() == 'windows':
+            _wifiIFace = pywifi.PyWiFi().interfaces()[0]
+        elif platform.system().lower() == 'linux':
+            _wifiIFace = pywifi.PyWiFi().interfaces()[1]
+        else:
+            pass
 
 
 # 扫描可用的无线网络
@@ -44,7 +49,7 @@ def wifiScan():
     scanList = []
     if _wifiIFace:
         _wifiIFace.scan()
-        time.sleep(5)
+        time.sleep(8)
         wifiDict = {}
         wifiList = _wifiIFace.scan_results()
         for ap in wifiList:
@@ -146,6 +151,6 @@ class wifiManager:
 
 if __name__ == '__main__':
     wifiInit()
-    wifiScan()
-    wifiConnect('Damien', '123456789')
+    print(wifiScan())
+    # wifiConnect('Damien', '123456789')
 
