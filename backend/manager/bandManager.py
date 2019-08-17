@@ -22,6 +22,8 @@ __all__ = [
 
 
 BLE_SERIAL_NAME = '/dev/serial0'
+# BLE_LIBRARY_PATH = '/usr/lib/libm1_shared_raspbian_zerow.so'
+BLE_LIBRARY_PATH  = '/usr/lib/libm1_shared_zerow_gcc.so'
 
 US_BLE_OK                   = 100
 US_BLE_ERR_ADAPTER_INIT     = 101
@@ -44,7 +46,7 @@ band_mac_t  = c_ubyte * 6
 # 定义回调函数类型
 onConnectedCallback_t       = CFUNCTYPE(None, band_addr_t, c_ushort)
 onDisconnectedCallback_t    = CFUNCTYPE(None, c_ushort)
-onAdvReportCallback_t       = CFUNCTYPE(None, band_addr_t, c_ubyte, c_ubyte_p, c_ushort, c_char)
+onAdvReportCallback_t       = CFUNCTYPE(None, band_addr_t, c_ubyte, c_ubyte_p, c_ushort, c_byte)
 onConnTimeoutCallback_t     = CFUNCTYPE(None, band_addr_t)
 onScanTimeoutCallback_t     = CFUNCTYPE(None)
 onWriteResponseCallback_t   = CFUNCTYPE(None, c_ushort, c_ushort, c_ushort)
@@ -60,6 +62,8 @@ _bandConnTimeout    = False
 _bandList           = []
 _bandHvx            = {}
 _bandInv            = 30 * 60
+_bandMac            = (c_ubyte * 6)()
+_bandMonitorAddr    = None
 
 _bandStop           = False
 _bandThread         = None
@@ -70,25 +74,31 @@ _scanDone           = False
 
 _cbOnConnected      = None
 _cbOnDisconnected   = None
+_cbOnAdvReport      = None
+_cbOnConnTimeout    = None
+_cbOnScanTimeout    = None
+_cbOnWriteResponse  = None
+_cbOnHvx            = None
+_cbOnTxComplete     = None
+
 _cbOnMonitor        = None
 
 
 # 将地址转换为字符串
 def macToString(addr):
-    mac = '%02X%02X%02X%02X%02X%02X' %(addr[0], addr[1], addr[2], addr[3], addr[4], addr[5])
+    mac = '%02X%02X%02X%02X%02X%02X' %(addr[5], addr[4], addr[3], addr[2], addr[1], addr[0])
     return mac
 
 
 # 将字符串转换为地址
 def stringToMac(addr):
-    mac = (c_ubyte * 6)()
-    mac[0] = int(addr[ 0: 2], 16)
-    mac[1] = int(addr[ 2: 4], 16)
-    mac[2] = int(addr[ 4: 6], 16)
-    mac[3] = int(addr[ 6: 8], 16)
-    mac[4] = int(addr[ 8:10], 16)
-    mac[5] = int(addr[10:12], 16)
-    return mac
+    _bandMac[5] = int(addr[ 0: 2], 16)
+    _bandMac[4] = int(addr[ 2: 4], 16)
+    _bandMac[3] = int(addr[ 4: 6], 16)
+    _bandMac[2] = int(addr[ 6: 8], 16)
+    _bandMac[1] = int(addr[ 8:10], 16)
+    _bandMac[0] = int(addr[10:12], 16)
+    return _bandMac
 
 
 # 连接成功处理回调函数
@@ -96,13 +106,9 @@ def onConnected(addr, handle):
     global _bandCdll, _bandIsConnected, _bandConnHandle
     logging.debug('onConnected().')
     if _bandCdll:
-        _bandCdll.us_ble_enable_cccd(handle)
+        _bandCdll.us_ble_enable_cccd(c_ushort(handle))
         _bandIsConnected = True
         _bandConnHandle  = handle
-
-    # 连接成功回调函数
-    if _cbOnConnected:
-        _cbOnConnected()
 
 
 # 连接断开回调函数
@@ -112,20 +118,38 @@ def onDisconnected(handle):
     _bandIsConnected = False
     _bandConnHandle  = 0xFFFF
 
-    # 连接断开回调函数
-    if _cbOnDisconnected:
-        _cbOnDisconnected()
-
 
 # 扫描结果处理回调函数
 def onAdvReport(addr, type, buff, length, rssi):
-    global _bandList
+    global _bandList, _bandMonitorAddr, _bandHvx, _bandMonitorAddr
     if length == 31 and buff[0] == 0x03 and buff[1] == 0x08 and buff[2] == 0x42 and buff[3] == 0x33:
         addr = macToString(addr)
         item = { 'mac' : addr }
         if item not in _bandList:
             _bandList.append(item)
             logging.debug('onAdvReport(): mac - %s, high blood - %d, low blood - %d, heart rate - %d' %(addr, buff[25], buff[30], buff[16]))
+
+        if _bandMonitorAddr and addr == _bandMonitorAddr:
+            _bandHvx['battery'] = buff[15] & 0x7F
+            _bandHvx['batteryUpdate'] = True if (buff[15] & 0x80) == 0x80 else False
+            _bandHvx['heartRate'] = buff[16] & 0xFF
+            _bandHvx['heartRateUpdate'] = True if (buff[18] & 0x80) == 0x80 else False
+            _bandHvx['temperature'] = ((buff[23] & 0x7F) << 4) + ((buff[24] & 0xFF) >> 4)
+            _bandHvx['temperatureUpdate'] = True if (buff[23] & 0x80) == 0x80 else False
+            _bandHvx['systolicPre'] = buff[25] & 0xFF
+            _bandHvx['diastolicPre'] = buff[30] & 0xFF
+            _bandHvx['bloodPressureUpdate'] = True if (buff[24] & 0x01) == 0x01 else False
+            _bandHvx['notWearingAlert'] = True if (buff[24] & 0x04) == 0x04 else False
+            # logging.debug('battery - %d%%' %_bandHvx['battery'])
+            # logging.debug('batteryUpdate - %s' %('yes' if _bandHvx['batteryUpdate'] else 'no'))
+            # logging.debug('heartRate - %d' %_bandHvx['heartRate'])
+            # logging.debug('heartRateUpdate - %s' %('yes' if _bandHvx['heartRateUpdate'] else 'no'))
+            # logging.debug('temperature - %d' %_bandHvx['temperature'])
+            # logging.debug('temperatureUpdate - %s' %('yes' if _bandHvx['temperatureUpdate'] else 'no'))
+            # logging.debug('systolicPre - %d' %_bandHvx['systolicPre'])
+            # logging.debug('diastolicPre - %d' %_bandHvx['diastolicPre'])
+            # logging.debug('bloodPressureUpdate - %s' %('yes' if _bandHvx['temperatureUpdate'] else 'no'))
+            # logging.debug('notWearingAlert - %s' %('yes' if _bandHvx['notWearingAlert'] else 'no'))
 
 
 # 连接超时回调函数
@@ -146,14 +170,15 @@ def onScanTimeout():
 
 # 激活设备通知成功回调函数
 def onWriteResponse(connHandle, cccdHandle, status):
-    logging.debug('onWriteResponse().')
+    if connHandle == 12:
+        logging.debug('onWriteResponse(): CCCD Enabled')
 
 
 # 从设备通知回调函数
 def onHvx(connHandle, charHandle, buff, length):
     global _bandHvx, _reqeustHealth
-    logging.debug('onHvx().')
     cmd = buff[1]
+    logging.debug('onHvx() 0x%02x.' %cmd)
     if cmd == 0x14:
         # 电池电量数据
         _bandHvx['battery'] = str(buff[4])
@@ -210,45 +235,55 @@ def bandError():
 # 手环初始化
 def bandInit():
     global _bandCdll
+    global _cbOnConnected, _cbOnAdvReport, _cbOnConnTimeout, _cbOnScanTimeout, _cbOnDisconnected, _cbOnWriteResponse, _cbOnHvx, _cbOnTxComplete
     logging.debug('bandInit() start.')
     try:
-        if not _bandCdll:
-            # 避免重复初始化
-            _bandCdll = cdll.LoadLibrary('/usr/lib/libm1_shared_raspbian_zerow.so')
+        if not _bandCdll:   # 避免重复初始化
+            _bandCdll = cdll.LoadLibrary(BLE_LIBRARY_PATH)
+            logging.debug('load library: %s' %BLE_LIBRARY_PATH)
             if _bandCdll.us_ble_init(BLE_SERIAL_NAME):
-                _bandCdll.us_ble_set_callbacks(onConnectedCallback_t(onConnected),
-                                               onAdvReportCallback_t(onAdvReport),
-                                               onConnTimeoutCallback_t(onConnTimeout),
-                                               onScanTimeoutCallback_t(onScanTimeout),
-                                               onDisconnectedCallback_t(onDisconnected),
-                                               onWriteResponseCallback_t(onWriteResponse),
-                                               onHvxCallback_t(onHvx),
-                                               onTxCompleteCallback_t(onTxComplete))
+                _cbOnConnected      = onConnectedCallback_t(onConnected)
+                _cbOnDisconnected   = onDisconnectedCallback_t(onDisconnected)
+                _cbOnAdvReport      = onAdvReportCallback_t(onAdvReport)
+                _cbOnConnTimeout    = onConnTimeoutCallback_t(onConnTimeout)
+                _cbOnScanTimeout    = onScanTimeoutCallback_t(onScanTimeout)
+                _cbOnWriteResponse  = onWriteResponseCallback_t(onWriteResponse)
+                _cbOnHvx            = onHvxCallback_t(onHvx)
+                _cbOnTxComplete     = onTxCompleteCallback_t(onTxComplete)
+                _bandCdll.us_ble_set_callbacks(_cbOnConnected,
+                                               _cbOnAdvReport,
+                                               _cbOnConnTimeout,
+                                               _cbOnScanTimeout,
+                                               _cbOnDisconnected,
+                                               _cbOnWriteResponse,
+                                               _cbOnHvx,
+                                               _cbOnTxComplete)
                 logging.debug('bandInit() success.')
                 return True
-        logging.debug('bandInit() failed.')
-        bandError()
-        return False
     except:
         logging.debug('bandInit() except.')
         return False
+
+    logging.debug('bandInit() failed.')
+    bandError()
+    return False
 
 
 # 扫描手环
 def bandScan():
     global _bandCdll, _scanDone, _bandList
     logging.debug('bandScan() start.')
-    _bandList = []
     if _bandCdll:
+        _bandList = []
         _scanDone = False
         _bandCdll.us_ble_scan()
         while not _scanDone:
             time.sleep(1)
         logging.debug('band scan success.')
-    else:
-        logging.debug('band scan failed.')
-        bandError()
-    return _bandList
+        return True
+    logging.debug('band scan failed.')
+    bandError()
+    return False
 
 
 # 连接手环
@@ -275,10 +310,10 @@ def bandConnect(addr):
 
 # 断开手环连接
 def bandDisconnect():
-    global _bandCdll, _bandIsConnected, _connHandle
+    global _bandCdll, _bandIsConnected, _bandConnHandle
     logging.debug('bandDisconnect() start.')
     if _bandCdll and _bandIsConnected:
-        _bandCdll.us_ble_disconnect(c_ushort(_connHandle))
+        _bandCdll.us_ble_disconnect(c_ushort(_bandConnHandle))
         for timeout in range(0, 30):
             time.sleep(1)
             if not _bandIsConnected:
@@ -343,7 +378,7 @@ def bandRequestHealth(onOff):
         _reqeustHealth = onOff
         data = (c_ubyte * 20)()
         data[0] = 0x20
-        data[1] = 0x14
+        data[1] = 0x4B
         data[2] = 0x00
         data[3] = 0x00
         data[4] = 0x01 if onOff else 0x00
@@ -352,7 +387,7 @@ def bandRequestHealth(onOff):
 
 # 手环监控健康数据
 def bandMonitor(addr):
-    global _reqeustHealth, _bandIsConnected, _cbOnMonitor
+    global _reqeustHealth, _bandIsConnected, _bandMonitorAddr, _cbOnMonitor
     logging.debug('bandMonitor() start.')
     if bandConnect(addr):
         bandSetTime()                   # 设置手环时间
@@ -361,7 +396,7 @@ def bandMonitor(addr):
 
         # 等待测量结果
         for timeout in range(0, 120):
-            if not _reqeustHealth or not _bandIsConnected:
+            if _reqeustHealth and _bandIsConnected:
                 time.sleep(1)
                 logging.debug('band monitor wait: %ds.' %(timeout + 1))
 
@@ -373,6 +408,9 @@ def bandMonitor(addr):
             if _cbOnMonitor:
                 _cbOnMonitor()
 
+        _bandMonitorAddr = addr
+        time.sleep(5)
+        bandScan()  # 再次进行扫描，以获取手环的佩戴状态信息
         return True
     return False
 
@@ -424,12 +462,14 @@ def bandThreadStop():
 
 # 测试程序
 if __name__ == '__main__':
+    global _bandMonitorAddr
     bandInit()
     try:
         while len(_bandList) == 0:
+        # _bandMonitorAddr = 'D7FE9611366F'
             bandScan()
         bandSetInv(1)
-        bandThreadStart(_bandList[0]['mac'])
+        bandThreadStart('D7FE9611366F')
         while True:
             time.sleep(5)
     except KeyboardInterrupt:
