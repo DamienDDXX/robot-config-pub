@@ -25,6 +25,8 @@ __all__ = [
 logging.basicConfig(level = logging.DEBUG,
                     format = ' %(asctime)s - %(levelname)s- %(message)s')
 
+IMX_LIBRARY_PATH    = '/usr/lib/libimx.so'
+
 # 定义视频分辨率
 video_resolution_t  = c_int
 vr_qvga             = video_resolution_t(0) # 240p
@@ -310,22 +312,25 @@ def imxSetLog(onOff):
 
 
 # 初始化视频模块
-def imxInit(server, port devId):
+def imxInit(server, port, devId):
     global _imxCdll, _imxServer, _imxPort, _imxDevId, _imxLoginEvent, _imxCallEvent
     global _cbSysEvent, _cbLogin, _cbCallEvent, _cbNetState
 
-    ret = False
-    _imxServer     = server
-    _imxPort       = port
-    _imxDevId      = devId
-    _imxLoginEvent = threading.event()
+    _imxServer = server
+    _imxPort = port
+    _imxDevId = devId
+    if not _imxLoginEvent:
+        _imxLoginEvent = threading.Event()
     _imxLoginEvent.clear()
-    _imxCallEvent  = threading.event()
+    if not _imxCallEvent:
+        _imxCallEvent  = threading.Event()
     _imxCallEvent.clear()
     logging.debug('imxInit(server - %s, port - %d, devId - %s) start.' %(server, port, devId))
     try:
+        ret = True
         if not _imxCdll:
-            _imxCdll     = cdll.LoadLibrary('/usr/lib/libimx.so')
+            _imxCdll     = cdll.LoadLibrary(IMX_LIBRARY_PATH)
+            logging.debug('load library: %s' %IMX_LIBRARY_PATH)
             _cbSysEvent  = sys_event_callback_t(cbSysEvent)
             _cbLogin     = login_callback_t(cbLogin)
             _cbCallEvent = call_event_callback_t(cbCallEvent)
@@ -342,8 +347,10 @@ def imxInit(server, port devId):
                                 _cbSysEvent,
                                 _cbLogin,
                                 _cbCallEvent,
-                                _cbNetState) == 0:
-                ret = True
+                                _cbNetState) != 0:
+                ret = False
+    except:
+        ret = False
     finally:
         logging.debug('imxInit() %s.' %('success' if ret else 'failed'))
         return ret
@@ -358,16 +365,17 @@ def imxFini():
         _imxCdll.ImxFini()
         _imxCall = None
 
-# 登录视频模块
-def imxLogin(userId):
-    global _imxCdll
 
-    logging.debug('imxLogin(%s) start.' %userId)
+# 登录视频模块
+def imxLogin():
+    global _imxCdll, _imxDevId
+
     ret = False
-    if _imxCdll:
-        if _imxCdll.ImxLogin(c_char_p(userId)) == 0:
+    if _imxCdll and _imxDevId:
+        logging.debug('imxLogin(%s) start.' %_imxDevId)
+        if _imxCdll.ImxLogin(c_char_p(_imxDevId)) == 0:
             ret = True
-    logging.debug('imxLogin(%s) %s.' %(userId, 'success' if ret else 'failed'))
+        logging.debug('imxLogin(%s) %s.' %(_imxDevId, 'success' if ret else 'failed'))
     return ret
 
 
@@ -445,13 +453,13 @@ def imxHangup():
 
 
 # 视频呼出调试程序
-def callOutDebug():
+def debugCallOut():
     global _imxLoginEvent, _imxCallEvent, _imxCallIn
 
     server = '47.104.157.108'
-    port   = 0
-    devId  = 'joyee'
-    imxInit(server, port devId)
+    port = 0
+    devId = 'joyee'
+    imxInit(server, port, devId)
     imxGetSDKVersion()
     try:
         while True:
@@ -477,13 +485,13 @@ def callOutDebug():
 
 
 # 视频呼入调试程序
-def callInDebug():
+def debugCallIn():
     global _imxLoginEvent, _imxCallEvent
 
     server = '47.104.157.108'
-    port   = 0
+    port = 0
     devId  = 'joyee'
-    imxInit(server, port devId)
+    imxInit(server, port, devId)
     imxGetSDKVersion()
     try:
         while True:
@@ -512,5 +520,5 @@ def callInDebug():
 
 
 if __name__ == '__main__':
-    callInDebug()
+    debugCallOut()
 
