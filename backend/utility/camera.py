@@ -29,8 +29,9 @@ def capturePicture(picFile):
                 if ret:
                     cv2.imwrite(picFile, frame)
         finally:
-            cap.release()
-            cv2.destroyAllWindows()
+            if cap:
+                cap.release()
+                cv2.destroyAllWindows()
             return ret
     elif platform.system().lower() == 'linux':
         with picamera.PiCamera() as camera:
