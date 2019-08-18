@@ -33,7 +33,7 @@ def make_radio_filename():
         radio_file = None
     return radio_file
 
-    
+
 def enter_radio_test_env():
     return True, 'OK'
 
@@ -174,7 +174,7 @@ def button_inc_volume():
 
 
 def button_dec_volume():
-    button_record('增加音量键')
+    button_record('减少音量键')
 
 
 def enter_keypad_test_env():

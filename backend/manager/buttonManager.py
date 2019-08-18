@@ -70,7 +70,7 @@ def cbButton(chan):
 
     elif chan == BUTTON_CALL:
         # 呼叫按键
-        logging.debug('pressed button: \"PLAY\".')
+        logging.debug('pressed button: \"CALL\".')
         if _cbButtonCall:
             _cbButtonCall()
 
@@ -158,7 +158,7 @@ def buttonDecVolumeSetCallback(cb):
 
 # 回调函数测试
 def testCallback():
-    print('testCallback')
+    logging.debug('test callback.')
 
 
 # 执行代码
