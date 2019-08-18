@@ -24,6 +24,16 @@ _cbButtonDecVolume = None
 
 
 # radio, 测试扬声器
+def make_radio_filename():
+    if platform.system().lower() == 'windows':
+        radio_file = os.path.join(base_dir, '..\static\mp3\\bird.wav')
+    elif platform.system().lower() == 'linux':
+        radio_file = os.path.join(base_dir, '../static/mp3/bird.wav')
+    else:
+        radio_file = None
+    return radio_file
+
+    
 def enter_radio_test_env():
     return True, 'OK'
 
@@ -33,9 +43,10 @@ def exit_radio_test_env():
 
 
 def start_test_radio():
-    audio_file = os.path.join(base_dir, '..\static\mp3\\bird.wav')
-    if os.path.isfile(audio_file):
-        audioRecord.audioPlay(audio_file)
+    radio_file = make_radio_filename()
+    if radio_file:
+        if os.path.isfile(radio_file):
+            audioRecord.audioPlay(radio_file)
     return True, 'OK'
 
 
@@ -44,13 +55,24 @@ def stop_test_radio():
 
 
 # audio, 测试麦克风
+def make_audio_filename():
+    if platform.system().lower() == 'windows':
+        audio_file = os.path.join(base_dir, '..\static\mp3\\test.wav')
+    elif platform.system().lower() == 'linux':
+        audio_file = os.path.join(base_dir, '../static/mp3/test.wav')
+    else:
+        audio_file = None
+    return audio_file
+
+
 def remove_audio_file():
-    audio_file = os.path.join(base_dir, '..\static\mp3\\test.wav')
-    if os.path.isfile(audio_file):
-        try:
-            os.remove(audio_file)
-        except:
-            pass
+    audio_file = make_audio_filename()
+    if audio_file:
+        if os.path.isfile(audio_file):
+            try:
+                os.remove(audio_file)
+            except:
+                pass
 
 
 def enter_audio_test_env():
@@ -65,7 +87,7 @@ def exit_audio_test_env():
 
 def start_recording_audio():
     remove_audio_file()
-    audio_file = os.path.join(base_dir, '..\static\mp3\\test.wav')
+    audio_file = make_audio_filename()
     audioRecord.audioRecord(audio_file, 5)
     return True, 'OK'
 
@@ -75,7 +97,7 @@ def stop_recording_audio():
 
 
 def play_recorded_audio():
-    audio_file = os.path.join(base_dir, '..\static\mp3\\test.wav')
+    audio_file = make_audio_filename()
     if os.path.isfile(audio_file):
         audioRecord.audioPlay(audio_file)
     return True, 'OK'
@@ -203,13 +225,24 @@ def get_keypad_strings():
 
 
 # camera, 测试摄像头
+def make_picture_filename():
+    if platform.system().lower() == 'windows':
+        pic_file = os.path.join(base_dir, '..\static\img\\camera.jpg')
+    elif platform.system().lower() == 'linux':
+        pic_file = os.path.join(base_dir, '../static/img/camera.jpg')
+    else:
+        pic_file = None
+    return pic_file
+
+
 def remove_picture_file():
-    pic_file = os.path.join(base_dir, '..\static\img\\camera.jpg')
-    if os.path.isfile(pic_file):
-        try:
-            os.remove(pic_file)
-        except:
-            pass
+    pic_file = make_picture_filename()
+    if pic_file:
+        if os.path.isfile(pic_file):
+            try:
+                os.remove(pic_file)
+            except:
+                pass
     return True, 'OK'
 
 
@@ -224,8 +257,8 @@ def exit_camera_test_env():
 
 
 def capture_camera():
-    remove_picture_file()
-    pic_file = os.path.join(base_dir, '..\static\img\\camera.jpg')
-    if camera.capturePicture(pic_file):
-        return True, camera.pictureToBase64(pic_file)
+    pic_file = make_picture_filename()
+    if pic_file:
+        if camera.capturePicture(pic_file):
+            return True, camera.pictureToBase64(pic_file)
     return True, ''

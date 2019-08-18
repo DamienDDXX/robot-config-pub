@@ -13,7 +13,7 @@ __all__ = [
 CHUNK = 512
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
-RATE = 24000
+RATE = 16000
 RECORD_SECONDS = 5
 
 
@@ -61,6 +61,9 @@ def audioPlay(wavFile):
 
 
 if __name__ == '__main__':
+    wavFile = '/home/pi/robot-config/backend/static/mp3/bird.wav'
+    audioPlay(wavFile)
+    """
     wavFile = 'test.wav'
     if os.path.isfile(wavFile):
         try:
@@ -74,5 +77,4 @@ if __name__ == '__main__':
             os.remove(wavFile)
         except:
             pass
-
-
+    """
