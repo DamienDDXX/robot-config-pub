@@ -1,10 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 
-import pyaudio
-import wave
-import os
-import sys
+import pyaudio, wave
+import os, sys, platform
 
 __all__ = [
         'audioRecord',
@@ -61,29 +59,37 @@ def audioRecord(wavFile, seconds):
 
 # 播放
 def audioPlay(wavFile):
-    wf = None
-    p = None
-    stream = None
-    try:
-        wf = wave.open(wavFile, 'rb')
-        p = pyaudio.PyAudio()
-        stream = p.open(format = p.get_format_from_width(wf.getsampwidth()),
-                        channels = wf.getnchannels(),
-                        rate=wf.getframerate(),
-                        output = True)
-        data = wf.readframes(CHUNK)
-        while data != '':
-            stream.write(data)
+    if platform.system().lower() == 'windows':
+        wf = None
+        p = None
+        stream = None
+        try:
+            wf = wave.open(wavFile, 'rb')
+            p = pyaudio.PyAudio()
+            stream = p.open(format = p.get_format_from_width(wf.getsampwidth()),
+                            channels = wf.getnchannels(),
+                            rate=wf.getframerate(),
+                            output = True)
             data = wf.readframes(CHUNK)
+            while data != '':
+                stream.write(data)
+                data = wf.readframes(CHUNK)
 
-    finally:
-        if stream:
-            stream.stop_stream()
-            stream.close()
-        if p:
-            p.terminate()
-        if wf:
-            wf.close()
+        finally:
+            if stream:
+                stream.stop_stream()
+                stream.close()
+            if p:
+                p.terminate()
+            if wf:
+                wf.close()
+    elif platform.system().lower() == 'linux':
+        try:
+            os.system('aplay %s' %wavFile)
+        finally:
+            pass
+    else:
+        pass
 
 
 if __name__ == '__main__':
