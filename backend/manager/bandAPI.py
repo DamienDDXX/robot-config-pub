@@ -10,6 +10,7 @@ if __name__ == '__main__':
     sys.path.append('..')
 
 from data_access import confmgr
+from utility import setLogging
 
 __all__ = [
         'init',
@@ -33,9 +34,6 @@ US_BLE_ERR_OPTIONS_SET      = 103
 US_BLE_ERR_CALLBACK_INVALID = 104
 US_BLE_ERR_CONN_IN_PROGRESS = 105
 US_BLE_ERR_CONN_TOO_MANY    = 106
-
-logging.basicConfig(level = logging.DEBUG,
-                    format = ' %(asctime)s - %(filename)s[line:%(lineno)d] - %(thread)d - %(levelname)s - %(message)s')
 
 
 # 手环 mac 地址数据结构
@@ -388,7 +386,7 @@ def requestHealth(onOff):
 def monitor(addr):
     global _reqeustHealth, _isConnected, _band
 
-    logging.debug('bandAPI.monitor().')
+    logging.debug('bandAPI.monitor(%s).' %addr)
     if connect(addr):
         setTime()                   # 设置手环时间
         time.sleep(1)
@@ -435,7 +433,7 @@ def getBand():
         return ret, band
 
 
-###############################################################################
+################################################################################
 # 测试程序
 if __name__ == '__main__':
     try:

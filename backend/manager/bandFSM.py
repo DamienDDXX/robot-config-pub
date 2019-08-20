@@ -3,15 +3,22 @@
 
 import time
 import Queue
-import threading
 import logging
+import platform
+import threading
 from transitions import Machine, State
 
 if __name__ == '__main__':
     import sys
     sys.path.append('..')
 
-from manager import bandAPI as band
+from utility import setLogging
+if platform.system().lower() == 'windows':
+    from manager import bandSIM as band
+elif platform.system().lower() == 'linux':
+    from manager import bandAPI as band
+else:
+    raise NotImplementedError
 
 __all__ = [
         'init',
@@ -20,8 +27,6 @@ __all__ = [
         'getEvent'
         ]
 
-logging.basicConfig(level = logging.DEBUG,
-                    format = ' %(asctime)s - %(filename)s[line:%(lineno)d] - %(thread)d - %(levelname)s - %(message)s')
 
 # 局部变量
 _mac        = None
@@ -95,7 +100,7 @@ def errorTimeout():
 
     logging.debug('bandFSM.errorTimeout().')
     while not _fsmFini:
-        for wait in rang(0, 30):
+        for wait in range(0, 30):
             time.sleep(1)
             if _fsmFini:
                 break
@@ -269,7 +274,7 @@ def fini():
             time.sleep(1)
 
 
-###############################################################################
+################################################################################
 # 测试程序
 if __name__ == '__main__':
     try:
