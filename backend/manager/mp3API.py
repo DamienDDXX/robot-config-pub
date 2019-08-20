@@ -38,7 +38,7 @@ logging.basicConfig(level = logging.DEBUG,
 if platform.system().lower() == 'windows':
     MP3_DIR_ = os.getcwd()
 elif platform.system().lower() == 'linux':
-    MP3_DIR_ = '/home/pi/robot/mp3List'
+    MP3_DIR_ = '/ram'
 else:
     raise NotImplementedError
 
@@ -382,6 +382,9 @@ def init(hostName, portNumber, token, volume = 0.5, mp3Dir = MP3_DIR_):
     _token = token
     _mp3Dir = mp3Dir
     _volume = volume
+    if platform.system().lower() == 'linux':
+        # 挂载虚拟盘
+        os.system('sudo mount -t tmpfs -o size=50m,mode=0777 tmpfs /ram')
 
 
 # 测试程序
