@@ -57,8 +57,6 @@ def getGps():
         setting_conf, _ = confmgr.get_conf_section('SETTINGS')
         gps = setting_conf['gps']
         ret = True
-    except:
-        pass
     finally:
         return ret, gps
 

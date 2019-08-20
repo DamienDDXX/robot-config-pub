@@ -2,9 +2,14 @@
 # -*- coding: utf8 -*-
 
 from ctypes import *
-import sys
 import time
 import logging
+
+if __name__ == '__main__':
+    import sys
+    sys.path.append('..')
+
+from data_access import confmgr
 
 __all__ = [
         'init',
@@ -14,6 +19,7 @@ __all__ = [
         'monitor',
         'getHvx',
         'getScan',
+        'getBand'
         ]
 
 
@@ -366,7 +372,7 @@ def requestBattery():
 # 请求测量健康数据
 def requestHealth(onOff):
     global _cdll, _isConnected, _connHandle, _reqeustHealth
-    logging.debug('bandAPI.requestHealth().')
+    logging.debug('bandAPI.requestHealth(%s).' %('on' if onOff else 'off'))
     if _cdll and _isConnected:
         _reqeustHealth = onOff
         data = (c_ubyte * 20)()
@@ -409,21 +415,49 @@ def monitor(addr):
     return False, None
 
 
+# 获取手环配置
+def getBand():
+    ret = False
+    band = ''
+    logging.debug('bandAPI.getBand().')
+    try:
+        setting_conf, _ = confmgr.get_conf_section('BRACELET')
+        band = setting_conf['bracelet1']
+        if len(band) == 12:
+            for i in range(0, 6):
+                val = int(band[2 * i : 2 * (i + 1)], 16)
+                if val < 0 or val > 255:
+                    raise ValueError
+        ret = True
+    except:
+        ret = False
+    finally:
+        return ret, band
+
+
+###############################################################################
 # 测试程序
+
 if __name__ == '__main__':
     try:
         scanList = []
         if init():
+            ret, band = getBand()
+            if not ret:
+                while True:
+                    ret, scanList = scan()
+                    if ret and len(scanList) > 0:
+                        band = scanList[0]['mac']
+                        print(scanList)
+                        break;
+                    time.sleep(30)
+
             while True:
-                ret, scanList = scan()
-                if ret and len(scanList) > 0:
-                    print(scanList)
-                    while True:
-                        ret, hvx = monitor(scanList[0]['mac'])
-                        if ret:
-                            print(hvx)
-                        time.sleep(60)
-                time.sleep(10)
+                ret, hvx = monitor(band)
+                if ret:
+                    print(hvx)
+                time.sleep(60)
+            time.sleep(10)
     except KeyboardInterrupt:
         sys.exit(0)
 
