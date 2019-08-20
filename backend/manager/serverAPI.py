@@ -30,7 +30,7 @@ MP3_LIST_URL_POSTFIX    = '/medical/robot/listMp3'          # 音频列表地址
 DOCTOR_LIST_URL_POSTFIX = '/medical/robot/listOnlineDoctor' # 在线医生列表地址
 
 logging.basicConfig(level = logging.DEBUG,
-                    format = ' %(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s - %(message)s')
+                    format = ' %(asctime)s - %(filename)s[line:%(lineno)d] - %(thread)d - %(levelname)s - %(message)s')
 
 
 # 局部变量

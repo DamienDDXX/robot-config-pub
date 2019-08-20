@@ -32,7 +32,7 @@ __all__ = [
         ]
 
 logging.basicConfig(level = logging.DEBUG,
-                    format = ' %(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s - %(message)s')
+                    format = ' %(asctime)s - %(filename)s[line:%(lineno)d] - %(thread)d - %(levelname)s - %(message)s')
 
 # mp3 文件保存路径
 if platform.system().lower() == 'windows':
@@ -180,10 +180,10 @@ def updateFile(mp3List, cbRadio = None):
                 _radioDict[fileId]  = mp3Path
 
     # 如果有广播文件，则调用广播回调函数
-    if haveRadio() and cbRadio:
+    if len(_radioDict) > 0 and cbRadio:
         cbRadio()
 
-    logging.debug('updateFile() done.')
+    logging.debug('mp3API.updateFile() done.')
     return True
 
 
@@ -215,8 +215,6 @@ def playRadio():
     logging.debug('mp3API.playRadio().')
     try:
         if len(_radioDict) > 0:
-            if not mixer.get_init():
-                mixer.init()
             fileId = None
             _radioPlay = True
             while _radioPlay and len(_radioDict) > 0:
@@ -225,14 +223,16 @@ def playRadio():
                 mp3Path = _radioDict[fileId]
                 if os.path.isfile(mp3Path):
                     # 开始播放广播
-                    logging.debug('play radio: %s.' %mp3Path)
+                    logging.debug('play radio: %s start.' %mp3Path)
+                    if not mixer.get_init():
+                        mixer.init()
                     mixer.music.set_volume(_volume)
                     mixer.music.load(mp3Path)
                     mixer.music.play()
                     while _radioPlay:
                         if not mixer.music.get_busy():
                             # 播放完毕，切换到下一首
-                            logging.debug('play radio: finished.')
+                            logging.debug('play radio: %s finished.' %mp3Path)
                             fileId = nextFileId(_radioDict, fileId)
                             if not fileId:
                                 _radioPlay = False
@@ -288,8 +288,6 @@ def playPolicy():
     logging.debug('mp3API.playPolicy().')
     try:
         if len(_policyDict) > 0:
-            if not mixer.get_init():
-                mixer.init()
             _policyPlay = True
             while _policyPlay and len(_policyDict) > 0:
                 if _policyFileId in _policyDict.keys():
@@ -304,28 +302,32 @@ def playPolicy():
                 if os.path.isfile(mp3File):
                     # 开始播放政策文件
                     logging.debug('play policy: %s %s.' %(mp3File, 'start' if start == 0.0 else 'resume'))
+                    if not mixer.get_init():
+                        mixer.init()
                     mixer.music.set_volume(_volume)
                     mixer.music.load(mp3File)
                     mixer.music.play(start = start)
 
                     _policyStart = start
                     start = time.time()
+                    finished = False
                     while _policyPlay:
                         if not mixer.music.get_busy():
                             # 播放完毕，切换到下一首
-                            logging.debug('play policy: finished.')
+                            logging.debug('play policy: %s finished.' %mp3File)
+                            finished = True
                             _policyStart = 0.0
                             _policyFileId = nextFileId(_policyDict, _policyFileId)
                             if not _policyFileId:
-                                # 播放结束
-                                _policyPlay = False
+                                _policyPlay = False     # 播放结束
                             break
                         time.sleep(1)
                         if _volume != mixer.music.get_volume():
                             mixer.music.set_volume(_volume)
                     mixer.music.stop()
                     mixer.quit()
-                    _policyStart += time.time() - start
+                    if not finished:
+                        _policyStart += time.time() - start
                 else:
                     # 政策文件不存在，切换到下一首
                     _policyStart = 0.0
@@ -338,7 +340,7 @@ def playPolicy():
         if _policyStop:
             _policyFileId = None
             _policyStart  = 0.0
-        logging.debug('mp3API.playPolicy() stop.')
+        logging.debug('mp3API.playPolicy() %s.' %('halt' if _policyFileId else 'stop'))
 
 
 # 停止播放政策
@@ -395,13 +397,16 @@ if __name__ == '__main__':
             if update():
                 thr = threading.Thread(target = playPolicy)
                 thr.start()
-                time.sleep(30)
+                time.sleep(10)
                 haltPolicy()
-                time.sleep(30)
+                time.sleep(5)
+                logging.debug('thread is %s.'  %('alive' if thr.isAlive() else 'not alive'))
+                time.sleep(10)
                 thr = threading.Thread(target = playPolicy)
                 thr.start()
                 while True:
                     time.sleep(1)
+                    logging.debug('thread is %s.'  %('alive' if thr.isAlive() else 'not alive'))
     except KeyboardInterrupt:
         pass
     finally:
