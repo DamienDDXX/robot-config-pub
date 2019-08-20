@@ -224,8 +224,9 @@ def fsmThread():
     global _fsmFini, _fsmThread, _fsm
 
     logging.debug('bandFSM.fsmThread().')
-    _fsm.to_stateInit()
+
     _fsmFini = False
+    _fsm.to_stateInit()
     while not _fsmFini:
         time.sleep(1)
         event = getEvent()
