@@ -38,11 +38,11 @@ _monitorInvThread   = None
 _fsm        = None
 _machine    = None
 _states     = [
-        State(name = 'stateInit',   on_enter = 'entryInit',     on_exit = 'exitInit'),      # 初始状态
-        State(name = 'stateError',  on_enter = 'entryError',    on_exit = 'exitError'),     # 错误状态
-        State(name = 'stateIdle',   on_enter = 'entryIdle',     on_exit = 'exitIdle'),      # 空闲状态
-        State(name = 'stateScan',   on_enter = 'entryScan',     on_exit = 'exitScan'),      # 扫描状态
-        State(name = 'stateMonitor',on_enter = 'entryMonitor',  on_exit = 'exitMonitor')    # 监控状态
+        State(name = 'stateInit',   on_enter = 'entryInit',     on_exit = 'exitInit',    ignore_invalid_triggers = True),   # 初始状态
+        State(name = 'stateError',  on_enter = 'entryError',    on_exit = 'exitError',   ignore_invalid_triggers = True),   # 错误状态
+        State(name = 'stateIdle',   on_enter = 'entryIdle',     on_exit = 'exitIdle',    ignore_invalid_triggers = True),   # 空闲状态
+        State(name = 'stateScan',   on_enter = 'entryScan',     on_exit = 'exitScan',    ignore_invalid_triggers = True),   # 扫描状态
+        State(name = 'stateMonitor',on_enter = 'entryMonitor',  on_exit = 'exitMonitor', ignore_invalid_triggers = True)    # 监控状态
         ]
 _transitios = [
         # 初始状态 ------->
@@ -91,33 +91,46 @@ _transitios = [
 # 错误超时处理
 #   间隔 30s 重新初始化
 def errorTimeout():
-    global _machine, _errorTimeoutThread
+    global _fsm, _errorTimeoutThread, _fsmFini
+
     logging.debug('bandFSM.errorTimeout().')
-    while True:
-        time.sleep(30)
-        if putEvent(_machine.evtInit):
-            break
+    while not _fsmFini:
+        for wait in rang(0, 30):
+            time.sleep(1)
+            if _fsmFini:
+                break
+
+        if not _fsmFini:
+            if putEvent(_fsm.evtInit):
+                break
     _errorTimeoutThread = None
 
 
 # 定时监控处理
 def monitorInv():
-    global _machine, _monitorInvThread
+    global _fsm, _monitorInvThread
+
     logging.debug('bandFSM.monitorInv().')
-    time.sleep(_inv)
-    putEvent(_machine.evtMonitor)
+    for wait in range(0, _inv):
+        time.sleep(1)
+        if _fsmFini:
+            break
+
+    if not _fsmFini:
+        putEvent(_fsm.evtMonitor)
+
     _monitorInvThread = None
 
 
 class bandFsm(object):
     # 进入初始化状态
     def entryInit(self):
-        global _machine
+        global _fsm
         logging.debug('bandFSM.entryInit().')
         if band.init():
-            putEvent(_machine.evtInitOk)
+            putEvent(_fsm.evtInitOk)
         else:
-            putEvent(_machine.evtInitError)
+            putEvent(_fsm.evtInitError)
 
     # 退出初始化状态
     def exitInit(self):
@@ -158,10 +171,10 @@ class bandFsm(object):
 
     # 进入扫描状态
     def entryScan(self):
-        global _machine
+        global _fsm
         logging.debug('bandFSM.entryScan().')
         band.scan()
-        putEvent(_machine.evtRelease)
+        putEvent(_fsm.evtRelease)
 
     # 退出扫描状态
     def exitScan(self):
@@ -169,11 +182,11 @@ class bandFsm(object):
 
     # 进入监控状态
     def entryMonitor(self):
-        global _machine
+        global _fsm
         logging.debug('bandFSM.entryMonitor().')
         if _mac:
             band.monitor(_mac)
-        putEvent(_machine.evtRelease)
+        putEvent(_fsm.evtRelease)
 
     # 退出监控状态
     def exitMonitor(self):
@@ -208,34 +221,38 @@ def getEvent():
 
 # 手环状态机后台线程
 def fsmThread():
-    global _fsmFini, _fsmThread, _machine
+    global _fsmFini, _fsmThread, _fsm
+
     logging.debug('bandFSM.fsmThread().')
+    _fsm.to_stateInit()
+    _fsmFini = False
     while not _fsmFini:
         time.sleep(1)
         event = getEvent()
         if event:
             event()
-            logging.debug('bandFSM(): state - %s' %_machine.state)
+            logging.debug('bandFSM(): state - %s' %_fsm.state)
     _fsmThread = None
+    logging.debug('bandFSM.fsmThread() fini.')
 
 
 # 初始化手环状态机
 def init(mac = None, inv = 30 * 60):
     global _fsm, _machine, _states, _transitios, _mac, _inv
     global _eventQueue, _eventList
-    global _fsmThread, _fsmFini
+    global _fsmThread
 
     logging.debug('bandFSM.init().')
     if not _fsm:
         _mac = mac
         _inv = inv
+        del _eventList[:]
+        _eventQueue = Queue.Queue(5)
         _fsm = bandFsm()
         _machine = Machine(_fsm, states = _states, transitions = _transitios, initial = 'stateInit', ignore_invalid_triggers = True)
-        _eventQueue = Queue.Queue(5)
-        del _eventList[:]
+        print(_fsm.state)
 
         if not _fsmThread:
-            _fsmFini = False
             _fsmThread = threading.Thread(target = fsmThread)
             _fsmThread.start()
 
@@ -243,8 +260,24 @@ def init(mac = None, inv = 30 * 60):
 # 终止手环状态机
 def fini():
     global _fsmFini, _fsmThread
+
+    logging.debug('bandFSM.fini().')
     if _fsmThread:
         _fsmFini = True
         while _fsmThread:
             time.sleep(1)
+
+
+###############################################################################
+# 测试程序
+if __name__ == '__main__':
+    try:
+        ret, mac = band.getBand()
+        if ret:
+            init(mac, 1 * 60)
+            while (1):
+                time.sleep(5)
+    except KeyboardInterrupt:
+        fini()
+        sys.exit(0)
 
