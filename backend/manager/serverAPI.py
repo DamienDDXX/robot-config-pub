@@ -10,7 +10,7 @@ if __name__ == '__main__':
     import sys
     sys.path.append('..')
 
-from data_access import confmgr
+import data_access.settings
 from utility import setLogging
 
 __all__ = [
@@ -47,17 +47,6 @@ _confUpdate     = False
 
 _personList     = []
 
-# 获取 gps 配置信息
-def getGps():
-    ret = False
-    gps = ''
-    try:
-        setting_conf, _ = confmgr.get_conf_section('SETTINGS')
-        gps = setting_conf['gps']
-        ret = True
-    finally:
-        return ret, gps
-
 
 # 初始化服务器模块
 def init(hostName, portNumber, robotId):
@@ -66,9 +55,8 @@ def init(hostName, portNumber, robotId):
     _hostName = hostName
     _portNumber = portNumber
     _robotId = robotId
-    ret, gps = getGps()
-    if ret:
-        _gps = gps
+    _, settings = data_access.settings.get_settings()
+    _gps = settings['gpsCoord']
 
     requests.packages.urllib3.disable_warnings()
 

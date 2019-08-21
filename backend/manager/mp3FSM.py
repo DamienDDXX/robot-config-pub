@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 
-
 import time
 import Queue
 import platform
@@ -15,7 +14,7 @@ if __name__ == '__main__':
 
 from utility import setLogging
 import manager.mp3API as mp3
-import manager.serverAPI as server
+import manager.serverFSM as server
 if platform.system().lower() == 'windows':
     import manager.buttonSIM as button
 elif platform.system().lower() == 'linux':
@@ -30,7 +29,6 @@ __all__ = [
         'putEvent',
         'getEvent'
         ]
-
 
 # 局部变量
 _volume_min     = 0.00
@@ -166,8 +164,7 @@ def updateThread(callback):
     logging.debug('mp3FSM.updateThread().')
     while not _fsmFini:
         if mp3.update():
-            if _fsm.state == 'stateInit':
-                putEvent(_fsm.evtInitOk)
+            server.setPlayUpdated() # 通知服务器音频列表更新完成
             break;
         for i in range(0, 60):
             time.sleep(1)
@@ -201,6 +198,7 @@ def policyThread():
     logging.debug('mp3FSM.policyThread() fini.')
 
 
+# 音频状态机管理类定义
 class mp3Fsm(object):
     # 更新音频列表
     def actUpdate(self):
@@ -306,7 +304,7 @@ def fsmThread():
     _fsmFini = False
     _fsm.to_stateInit()
     while not _fsmFini:
-        time.sleep(1)
+        time.sleep(0.5)
         event = getEvent()
         if event:
             event()
@@ -319,7 +317,7 @@ def fsmThread():
 # 初始化音频状态机
 def init(hostName, portNumber, token):
     global _hostName, _portNumber, _token
-    global _fsm, _machine, _states
+    global _fsm, _machine, _states, _transitions
     global _eventQueue, _eventList
     global _fsmThread
     logging.debug('mp3FSM.init(%s, %s, %s).' %(hostName, portNumber, token))
@@ -377,12 +375,14 @@ def fini():
 ###############################################################################
 # 测试程序
 if __name__ == '__main__':
+    import manager.serverAPI
+
     try:
         hostName    = 'https://ttyoa.com'
         portNumber  = '8098'
         robotId     = 'b827eb319c88'
-        server.init(hostName, portNumber, robotId)
-        ret, token = server.login()
+        manager.serverAPI.init(hostName, portNumber, robotId)
+        ret, token = manager.serverAPI.login()
         if ret:
             init(hostName, portNumber, token)
             while (1):
