@@ -9,7 +9,7 @@ if __name__ == '__main__':
     import sys
     sys.path.append('..')
 
-from data_access import confmgr
+from data_access import bracelet
 from utility import setLogging
 
 __all__ = [
@@ -415,18 +415,20 @@ def monitor(addr):
 
 # 获取手环配置
 def getBand():
-    ret = False
-    band = ''
     logging.debug('bandAPI.getBand().')
+    ret, band = False, ''
     try:
-        setting_conf, _ = confmgr.get_conf_section('BRACELET')
-        band = setting_conf['bracelet1']
-        if len(band) == 12:
-            for i in range(0, 6):
-                val = int(band[2 * i : 2 * (i + 1)], 16)
-                if val < 0 or val > 255:
-                    raise ValueError
-        ret = True
+        ret, bandList = bracelet.get_configured_bracelet_list()
+        if len(bandList) > 0:
+            band = bandList[0]['mac']
+            if len(band) == 12:
+                for i in range(0, 6):
+                    val = int(band[2 * i : 2 * (i + 1)], 16)
+                    if val < 0 or val > 255:
+                        raise ValueError
+                ret = True
+            else:
+                ret = False
     except:
         ret = False
     finally:
