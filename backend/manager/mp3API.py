@@ -277,6 +277,8 @@ def clearRadio():
                 del _mp3PrioDict[fileId]
             except:
                 traceback.print_exc()
+            finally:
+                pass
     _radioDict.clear()
 
 

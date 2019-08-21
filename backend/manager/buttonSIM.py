@@ -5,6 +5,7 @@ import logging
 import threading
 import pyHook
 import pythoncom
+import time
 
 if __name__ == '__main__':
     import time
@@ -21,7 +22,8 @@ __all__ = [
             'setPowerCallback',
             'setIncVolumeCallback',
             'setDecVolumeCallback',
-            'setImxCallback'
+            'setImxCallback',
+            'setRadioCallback'
             ]
 
 # 定义按键
@@ -34,6 +36,7 @@ BUTTON_PLAY         = 'P'   # 'p' - 播放
 BUTTON_CALL         = 'C'   # 'c' - 呼叫
 
 BUTTON_IMX          = 'X'   # 'x' - 视频模拟
+BUTTON_RADIO        = 'U'   # 'u' - 广播模拟
 
 # 局部变量
 _fini               = False
@@ -46,6 +49,7 @@ _cbButtonMute       = None  # 关闭自动接入按键回调函数指针
 _cbButtonPlay       = None  # 播放按键回调函数指针
 _cbButtonCall       = None  # 呼叫按键回调函数指针
 _cbButtonImx        = None  # 视频模拟按键回调函数指针
+_cbButtonRadio      = None  # 广播模拟按键回调函数指针
 
 _buttonThread       = None
 
@@ -68,6 +72,8 @@ class keypad():
                 _cbButtonCall()
             elif event.Key == BUTTON_IMX and _cbButtonImx:
                 _cbButtonImx()
+            elif event.Key == BUTTON_RADIO and _cbButtonRadio:
+                _cbButtonRadio()
         return True
 
     def onKeyUp(self, event):
@@ -164,6 +170,13 @@ def setImxCallback(cb):
     return cb
 
 
+# 设置广播模拟键处理回调函数
+def setRadioCallback(cb):
+    global _cbButtonRadio
+    _cbButtonRadio, cb = cb, _cbButtonRadio
+    return cb
+
+
 ################################################################################
 # 测试程序
 def testCallback():
@@ -180,6 +193,7 @@ if __name__ == '__main__':
     setDecVolumeCallback(testCallback)
     setIncVolumeCallback(testCallback)
     setImxCallback(testCallback)
+    setRadioCallback(testCallback)
     try:
         while True:
             time.sleep(2)

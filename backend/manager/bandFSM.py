@@ -256,8 +256,6 @@ def init(mac = None, inv = 30 * 60):
         _eventQueue = Queue.Queue(5)
         _fsm = bandFsm()
         _machine = Machine(_fsm, states = _states, transitions = _transitios, initial = 'stateInit', ignore_invalid_triggers = True)
-        print(_fsm.state)
-
         if not _fsmThread:
             _fsmThread = threading.Thread(target = fsmThread)
             _fsmThread.start()
