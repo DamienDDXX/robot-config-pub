@@ -12,8 +12,7 @@ if __name__ == '__main__':
     sys.path.append('..')
 
 from utility import setLogging
-import manager.serverAPI as server
-
+from manager import serverAPI
 
 __all__ = [
         'init',
@@ -92,7 +91,7 @@ def loginThread():
     global _loginThread, _fsm, _fsmFini
     logging.debug('serverFSM.loginThread().')
     while not _fsmFini:
-        ret, _token = server.login()
+        ret, _token = serverAPI.login()
         if ret:
             putEvent(_fsm.evtLoginOk)
             break
@@ -115,7 +114,7 @@ def configThread():
     logging.debug('serverFSM.configThread().')
     retry = 0
     while not _fsmFini:
-        ret, vsvrIp, vsvrIp, personList = server.getConfig()
+        ret, vsvrIp, vsvrIp, personList = serverAPI.getConfig()
         if ret:
             # TODO:
             #   配置视频服务器
@@ -143,6 +142,8 @@ def configThread():
 #   如果失败，间隔 30s 后重新同步
 #   尝试 6 次后重新登录
 def heartbeatThread():
+    from manager import mp3FSM
+
     global _heartbeatThread, _fsm, _fsmFini, _playVer, _confVer, _playUpdated, _confUpdated
     logging.debug('serverFSM.configThread().')
     for wait in range(0, HEARTBEAT_INV):    # 等待心跳时间间隔
@@ -152,15 +153,13 @@ def heartbeatThread():
 
     retry = 0
     while not _fsmFini:
-        ret, playVer, confVer = server.heatbeat(playVer = _playVer if _playUpdated else None,
-                                                confVer = _confVer if _confUpdated else None)
+        ret, playVer, confVer = serverAPI.heatbeat(playVer = _playVer if _playUpdated else None,
+                                                   confVer = _confVer if _confUpdated else None)
         if ret:
             _playVer, _playUpdated = playVer, False if playVer else _playUpdated
             _confVer, _confUpdated = confVer, False if confVer else _confUpdated
             if playVer:
-                # TODO
-                #   更新音频列表
-                pass
+                mp3FSM.updatePlay()         # 更新音频列表
             if _confVer:
                 putEvent(_fsm.evtConfig)    # 重新更新配置
             break;
@@ -206,9 +205,6 @@ class serverFSM(object):
         if not _heartbeatThread:
             _heartbeatThread = threading.Thread(target = heartbeatThread)
             _heartbeatThread.start()
-
-        # TODO:
-        #   心跳同步，间隔 10s, 重试 3 次，如果失败则错误处理
 
 
 # 向系统服务器状态机事件队列中放事件
@@ -268,15 +264,13 @@ def init(hostName, portNumber, robotId):
     global _fsmThread
     logging.debug('serverFSM.init().')
     if not _fsm:
-        _hostName = hostName
-        _portNumber = portNumber
-        _robotId = robotId
+        _hostName, _portNumber, _robotId = hostName, portNumber, robotId
         _fsm = serverFSM()
         _machine = Machine(_fsm, states = _states, transitions = _transitions, ignore_invalid_triggers = True)
         _eventQueue = Queue.Queue(5)
         del _eventList[:]
         if not _fsmThread:
-            server.init(_hostName, _portNumber, _robotId)
+            serverAPI.init(_hostName, _portNumber, _robotId)
             _fsmThread = threading.Thread(target = fsmThread)
             _fsmThread.start()
 
@@ -296,18 +290,10 @@ def fini():
 # 测试程序
 if __name__ == '__main__':
     try:
-        hostName    = 'https://ttyoa.com'
-        portNumber  = '8098'
-        robotId     = 'b827eb319c88'
+        hostName, portNumber, robotId = 'https://ttyoa.com', '8098', 'b827eb319c88'
         init(hostName, portNumber, robotId)
         while (1):
             time.sleep(1)
     except KeyboardInterrupt:
         fini()
         sys.exit(0)
-
-
-
-
-
-

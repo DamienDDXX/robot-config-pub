@@ -311,9 +311,7 @@ def heatbeat(playVer = None, cbUpdatePlay = None, confVer = None, cbUpdateConf =
 ################################################################################
 # 测试程序
 if __name__ == '__main__':
-    hostName    = 'https://ttyoa.com'
-    portNumber  = '8098'
-    robotId     = 'b827eb319c88'
+    hostName, portNumber, robotId = 'https://ttyoa.com', '8098', 'b827eb319c88'
     init(hostName, portNumber, robotId)
 
     # 测试登录

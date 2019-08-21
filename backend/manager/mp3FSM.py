@@ -13,8 +13,7 @@ if __name__ == '__main__':
     sys.path.append('..')
 
 from utility import setLogging
-import manager.mp3API as mp3
-import manager.serverFSM as server
+from manager import mp3API
 if platform.system().lower() == 'windows':
     import manager.buttonSIM as button
 elif platform.system().lower() == 'linux':
@@ -25,9 +24,9 @@ else:
 __all__ = [
         'init',
         'fini',
-        'update',
         'putEvent',
-        'getEvent'
+        'getEvent',
+        'updatePlay',
         ]
 
 # 局部变量
@@ -131,23 +130,30 @@ def cbBtnPlay():
 def cbBtnIncVolume():
     global _volume_inv, _volume_min, _volume_max
     logging.debug('mp3FSM.cbBtnIncVolume().')
-    volume = mp3.getVolume()
+    volume = mp3API.getVolume()
     volume = (volume + _volume_inv) if (volume + _volume_inv) < _volume_max else _volume_max
-    mp3.setVolume(volume)
+    mp3API.setVolume(volume)
 
 
 # 音量减少按键动作
 def cbBtnDecVolume():
     global _volume_inv, _volume_min, _volume_max
     logging.debug('mp3FSM.cbBtnDecVolume().')
-    volume = mp3.getVolume()
+    volume = mp3API.getVolume()
     volume = (volume - _volume_inv) if (volume - _volume_inv) > _volume_min else _volume_min
-    mp3.setVolume(volume)
+    mp3API.setVolume(volume)
 
 
 # 广播模拟按键动作
 def cbBtnRadio():
+    logging.debug('mp3FSM.cbBtnRadio().')
     update(cbUpdateDone)
+
+
+# 视频模拟按键动作
+def cbBtnImx():
+    global _fsm
+    logging.debug('mp3FSM current state: %s.' %_fsm.state)
 
 
 # 音频播放结束
@@ -160,11 +166,12 @@ def cbPlayDone():
 # 后台下载音频列表
 #   如果更新失败，则间隔 60s 后重新下载
 def updateThread(callback):
+    from manager import serverFSM
     global _fsm, _updateThread
     logging.debug('mp3FSM.updateThread().')
     while not _fsmFini:
-        if mp3.update():
-            server.setPlayUpdated() # 通知服务器音频列表更新完成
+        if mp3API.update():
+            serverFSM.setPlayUpdated()  # 通知服务器音频列表更新完成
             break;
         for i in range(0, 60):
             time.sleep(1)
@@ -180,7 +187,7 @@ def updateThread(callback):
 def radioThread():
     global _fsm, _radioThread, _radioCallback
     logging.debug('mp3FSM.radioThread().')
-    mp3.playRadio()   # 播放广播
+    mp3API.playRadio()   # 播放广播
     _radioThread = None
     if _radioCallback:
         _radioCallback()
@@ -191,7 +198,7 @@ def radioThread():
 def policyThread():
     global _fsm, _policyThread, _policyCallback
     logging.debug('mp3FSM.policyThread().')
-    mp3.playPolicy()  # 播放政策
+    mp3API.playPolicy()  # 播放政策
     _policyThread = None
     if _policyCallback:
         _policyCallback()
@@ -204,7 +211,7 @@ class mp3Fsm(object):
     def actUpdate(self):
         global _hostName, _portNumber, _token
         logging.debug('mp3FSM.actUpdate().')
-        mp3.init(_hostName, _portNumber, _token)
+        mp3API.init(_hostName, _portNumber, _token)
         update(cbInitOk)
 
     # 更新完成处理
@@ -227,7 +234,7 @@ class mp3Fsm(object):
         logging.debug('mp3FSM.actStopRadio().')
         if _radioThread:
             _radioCallback = None
-            mp3.stopRadio()
+            mp3API.stopRadio()
             while _radioThread:
                 time.sleep(0.5)
 
@@ -246,7 +253,7 @@ class mp3Fsm(object):
         logging.debug('mp3FSM.actStopPolicy().')
         if _policyThread:
             _policyCallback = None
-            mp3.stopPolicy()
+            mp3API.stopPolicy()
             while _policyThread:
                 time.sleep(0.5)
 
@@ -256,7 +263,7 @@ class mp3Fsm(object):
         logging.debug('mp3FSM.actHaltPolicy().')
         if _policyThread:
             _policyCallback = None
-            mp3.haltPolicy()
+            mp3API.haltPolicy()
             while _policyThread:
                 time.sleep(0.5)
 
@@ -299,6 +306,7 @@ def fsmThread():
     button.setDecVolumeCallback(cbBtnDecVolume)
     if platform.system().lower() == 'windows':
         button.setRadioCallback(cbBtnRadio)
+        button.setImxCallback(cbBtnImx)
 
     # 启动状态机事件循环
     _fsmFini = False
@@ -345,8 +353,8 @@ def cbInitOk():
 def cbUpdateDone():
     global _fsm
     logging.debug('mp3FSM.cbUpdateDone()')
-    if mp3.haveRadio():
-        putEvent(_fsm.evtRadio)
+    if mp3API.haveRadio():
+        putEvent(_fsm.evtRadio)     # 通知播放广播
 
 
 # 更新音频文件
@@ -357,6 +365,12 @@ def update(callback):
         # 启动后台更新音频文件
         _updateThread = threading.Thread(target = updateThread, args = [callback, ])
         _updateThread.start()
+
+
+# 更新音频列表
+def updatePlay():
+    logging.debug('mp3FSM.updatePlay().')
+    update(cbUpdateDone)
 
 
 # 终止音频状态机
@@ -376,7 +390,6 @@ def fini():
 # 测试程序
 if __name__ == '__main__':
     import manager.serverAPI
-
     try:
         hostName    = 'https://ttyoa.com'
         portNumber  = '8098'

@@ -15,7 +15,6 @@ if __name__ == '__main__':
     import threading
     sys.path.append('..')
 
-from manager import serverAPI as server
 from utility import setLogging
 
 __all__ = [
@@ -187,8 +186,9 @@ def updateFile(mp3List, cbRadio = None):
 
 # 更新音频文件
 def update():
+    from manager import serverAPI
     logging.debug('mp3API.update().')
-    ret, mp3List = server.getMp3List()
+    ret, mp3List = serverAPI.getMp3List()
     if ret:
         return updateFile(mp3List)
     return False
@@ -338,8 +338,7 @@ def playPolicy():
         traceback.print_exc()
     finally:
         if _policyStop:
-            _policyFileId = None
-            _policyStart  = 0.0
+            _policyFileId, _policyStart = None, 0.0
         logging.debug('mp3API.playPolicy() %s.' %('halt' if _policyFileId else 'stop'))
 
 
@@ -377,11 +376,7 @@ def setVolume(volume = 0.5):
 def init(hostName, portNumber, token, volume = 0.5, mp3Dir = MP3_DIR_):
     global _hostName, _portNumber, _token, _mp3Dir, _volume
     logging.debug('mp3API.init().')
-    _hostName = hostName
-    _portNumber = portNumber
-    _token = token
-    _mp3Dir = mp3Dir
-    _volume = volume
+    _hostName, _portNumber, _token, _volume, _mp3Dir = hostName, portNumber, token, volume, mp3Dir
     if platform.system().lower() == 'linux':
         # 挂载虚拟盘
         os.system('sudo mount -t tmpfs -o size=50m,mode=0777 tmpfs /ram')
@@ -390,12 +385,12 @@ def init(hostName, portNumber, token, volume = 0.5, mp3Dir = MP3_DIR_):
 ################################################################################
 # 测试程序
 if __name__ == '__main__':
+    from manager import serverAPI
+
     try:
-        hostName    = 'https://ttyoa.com'
-        portNumber  = '8098'
-        robotId     = 'b827eb319c88'
-        server.init(hostName, portNumber, robotId)
-        ret, token = server.login()
+        hostName, portNumber, robotId = 'https://ttyoa.com', '8098', 'b827eb319c88'
+        serverAPI.init(hostName, portNumber, robotId)
+        ret, token = serverAPI.login()
         if ret:
             init(hostName, portNumber, token)
             if update():
