@@ -44,41 +44,36 @@ _cbButtonCall       = None  # 呼叫按键回调函数指针
 def cbButton(chan):
     global _cbButtonPower, _cbButtonIncVolume, _cbButtonDecVolume, _cbButtonMute, _cbButtonPlay, _cbButtonCall
 
-    if chan == BUTTON_PLAY:
-        # 播放按键
-        logging.debug('pressed button: \"PLAY\".')
+    if chan == BUTTON_PLAY:         # 播放按键
         if _cbButtonPlay:
             _cbButtonPlay()
-
-    elif chan == BUTTON_MUTE:
-        # 关闭自动接入按键
-        logging.debug('pressed button: \"MUTE\".')
+        else:
+            logging.debug('pressed button: \"PLAY\".')
+    elif chan == BUTTON_MUTE:       # 关闭自动接入按键
         if _cbButtonMute:
             _cbButtonMute()
-
-    elif chan == BUTTON_INC_VOLUME:
-        # 音量增加按键
-        logging.debug('pressed button: \"VOLUME INC\".')
+        else:
+            logging.debug('pressed button: \"MUTE\".')
+    elif chan == BUTTON_INC_VOLUME: # 音量增加按键
         if _cbButtonIncVolume:
             _cbButtonIncVolume()
-
-    elif chan == BUTTON_DEC_VOLUME:
-        # 音量减少按键
-        logging.debug('pressed button: \"VOLUME DEC\".')
+        else:
+            logging.debug('pressed button: \"VOLUME INC\".')
+    elif chan == BUTTON_DEC_VOLUME: # 音量减少按键
         if _cbButtonDecVolume:
             _cbButtonDecVolume()
-
-    elif chan == BUTTON_CALL:
-        # 呼叫按键
-        logging.debug('pressed button: \"CALL\".')
+        else:
+            logging.debug('pressed button: \"VOLUME DEC\".')
+    elif chan == BUTTON_CALL:       # 呼叫按键
         if _cbButtonCall:
             _cbButtonCall()
-
-    elif chan == BUTTON_POWER:
-        # 电源按键
-        logging.debug('pressed button: \"POWER\".')
+        else:
+            logging.debug('pressed button: \"CALL\".')
+    elif chan == BUTTON_POWER:      # 电源按键
         if _cbButtonPower:
             _cbButtonPower()
+        else:
+            logging.debug('pressed button: \"POWER\".')
 
 
 # 初始化按键
