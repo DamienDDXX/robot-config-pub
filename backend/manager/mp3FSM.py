@@ -4,17 +4,22 @@
 
 import time
 import Queue
-import threading
 import logging
+import threading
 from transitions import Machine, State
 
 if __name__ == '__main__':
     import sys
     sys.path.append('..')
 
-import manager.mp3API    as mp3
-import manager.buttonAPI as button
-
+from utility import setLogging
+import manager.mp3API as mp3
+if platform.system().lower() == 'windows':
+    import manager.buttonSIM as button
+elif platform.system().lower() == 'linux':
+    import manager.buttonAPI as button
+else:
+    raise NotImplementedError
 
 __all__ = [
         'init',
@@ -22,10 +27,6 @@ __all__ = [
         'putEvent',
         'getEvent'
         ]
-
-
-logging.basicConfig(level = logging.DEBUG,
-                    format = ' %(asctime)s - %(filename)s[line:%(lineno)d] - %(thread)d - %(levelname)s - %(message)s')
 
 
 # 局部变量
@@ -379,3 +380,4 @@ def fini():
 ###############################################################################
 # 测试程序
 if __name__ == '__main__':
+    pass

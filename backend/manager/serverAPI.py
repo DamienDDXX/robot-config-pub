@@ -11,6 +11,7 @@ if __name__ == '__main__':
     sys.path.append('..')
 
 from data_access import confmgr
+from utility import setLogging
 
 __all__ = [
         'init',
@@ -28,9 +29,6 @@ CONFIG_URL_POSTFIX      = '/medical/robot/findMyConfig'     # 机器人配置信
 HEATBEAT_URL_POSTFIX    = '/medical/robot/heartbeat'        # 机器人心跳地址后缀
 MP3_LIST_URL_POSTFIX    = '/medical/robot/listMp3'          # 音频列表地址后缀
 DOCTOR_LIST_URL_POSTFIX = '/medical/robot/listOnlineDoctor' # 在线医生列表地址
-
-logging.basicConfig(level = logging.DEBUG,
-                    format = ' %(asctime)s - %(filename)s[line:%(lineno)d] - %(thread)d - %(levelname)s - %(message)s')
 
 
 # 局部变量
@@ -322,6 +320,7 @@ def heatbeat(playVer = None, cbUpdatePlay = None, confVer = None, cbUpdateConf =
         return ret, playUpdate, confUpdate
 
 
+################################################################################
 # 测试程序
 if __name__ == '__main__':
     hostName    = 'https://ttyoa.com'

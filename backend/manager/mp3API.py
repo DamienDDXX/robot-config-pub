@@ -16,6 +16,7 @@ if __name__ == '__main__':
     sys.path.append('..')
 
 from manager import serverAPI as server
+from utility import setLogging
 
 __all__ = [
         'init',
@@ -30,9 +31,6 @@ __all__ = [
         'getVolume',
         'setVolume',
         ]
-
-logging.basicConfig(level = logging.DEBUG,
-                    format = ' %(asctime)s - %(filename)s[line:%(lineno)d] - %(thread)d - %(levelname)s - %(message)s')
 
 # mp3 文件保存路径
 if platform.system().lower() == 'windows':
@@ -387,6 +385,7 @@ def init(hostName, portNumber, token, volume = 0.5, mp3Dir = MP3_DIR_):
         os.system('sudo mount -t tmpfs -o size=50m,mode=0777 tmpfs /ram')
 
 
+################################################################################
 # 测试程序
 if __name__ == '__main__':
     try:
