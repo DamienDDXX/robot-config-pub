@@ -36,8 +36,8 @@ _volume_inv     = 0.05
 _radioThread    = None
 _policyThread   = None
 _updateThread   = None
-_radioCallback  = None
-_policyCallback = None
+
+_playSuspend    = False
 
 _eventQueue     = None
 _eventList      = []
@@ -158,9 +158,10 @@ def cbBtnImx():
 
 # 音频播放结束
 def cbPlayDone():
-    global _fsm
+    global _fsm, _playSuspend
     logging.debug('mp3FSM.cbPlayDone().')
-    putEvent(_fsm.evtRelease)
+    if not _playSuspend:
+        putEvent(_fsm.evtRelease)
 
 
 # 后台下载音频列表
@@ -184,24 +185,24 @@ def updateThread(callback):
 
 
 # 后台播放广播
-def radioThread():
-    global _fsm, _radioThread, _radioCallback
+def radioThread(callback):
+    global _fsm, _radioThread
     logging.debug('mp3FSM.radioThread().')
     mp3API.playRadio()   # 播放广播
     _radioThread = None
-    if _radioCallback:
-        _radioCallback()
+    if callback:
+        callback()
     logging.debug('mp3FSM.radioThread() fini.')
 
 
 # 后台播放政策
-def policyThread():
-    global _fsm, _policyThread, _policyCallback
+def policyThread(callback):
+    global _fsm, _policyThread
     logging.debug('mp3FSM.policyThread().')
     mp3API.playPolicy()  # 播放政策
     _policyThread = None
-    if _policyCallback:
-        _policyCallback()
+    if callback:
+        callback()
     logging.debug('mp3FSM.policyThread() fini.')
 
 
@@ -221,48 +222,47 @@ class mp3Fsm(object):
 
     # 启动播放广播
     def actPlayRadio(self):
-        global _radioThread, _radioCallback
+        global _radioThread
         logging.debug('mp3FSM.actPlayRadio().')
         if not _radioThread:
-            _radioCallback = cbPlayDone
-            _radioThread   = threading.Thread(target = radioThread)
+            _radioThread = threading.Thread(target = radioThread, args = [cbPlayDone, ])
             _radioThread.start()
+            time.sleep(0.5)
 
     # 停止播放广播
     def actStopRadio(self):
-        global _radioThread, _radioCallback
+        global _radioThread, _playSuspend
         logging.debug('mp3FSM.actStopRadio().')
         if _radioThread:
-            _radioCallback = None
+            _playSuspend = True
             mp3API.stopRadio()
             while _radioThread:
                 time.sleep(0.5)
 
     # 启动播放政策
     def actPlayPolicy(self):
-        global _policyThread, _policyCallback
+        global _policyThread
         logging.debug('mp3FSM.actPlayPolicy().')
         if not _policyThread:
-            _policyCallback = cbPlayDone
-            _policyThread   = threading.Thread(target = policyThread)
+            _policyThread = threading.Thread(target = policyThread, args = [cbPlayDone, ])
             _policyThread.start()
 
     # 停止播放政策
     def actStopPolicy(self):
-        global _policyThread, _policyCallback
+        global _policyThread, _playSuspend
         logging.debug('mp3FSM.actStopPolicy().')
         if _policyThread:
-            _policyCallback = None
+            _playSuspend = True
             mp3API.stopPolicy()
             while _policyThread:
                 time.sleep(0.5)
 
     # 暂停播放政策
     def actHaltPolicy(self):
-        global _policyThread, _policyCallback
+        global _policyThread, _playSuspend
         logging.debug('mp3FSM.actHaltPolicy().')
         if _policyThread:
-            _policyCallback = None
+            _playSuspend = True
             mp3API.haltPolicy()
             while _policyThread:
                 time.sleep(0.5)

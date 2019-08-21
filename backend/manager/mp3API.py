@@ -74,8 +74,11 @@ def updateFileLocal():
     try:
         _mp3FileDict.clear()
         _mp3PrioDict.clear()
-        for fileName in os.listdir(_mp3Dir):
-            postFix = string.split(fileName, '.')[-1].lower()
+        # 按时间排序
+        result = [(i, os.stat(i).st_mtime) for i in os.listdir(_mp3Dir)]
+        for i in sorted(result, key = lambda x : x[1]):
+            fileName = i[0]
+            postFix  = string.split(fileName, '.')[-1].lower()
             if postFix == 'mp3':
                 fileId  = string.split(fileName, '.')[0];
                 _mp3FileDict[fileId] = os.path.join(_mp3Dir, fileName)
@@ -208,12 +211,14 @@ def nextFileId(fileDict, fileId):
 
 
 # 播放广播文件
+#   返回正在播放的文件编码
+#   如果为 None 则表示文件播放结束，否则为被停止
 def playRadio():
     global _radioDict, _radioPlay, _volume
     logging.debug('mp3API.playRadio().')
     try:
+        fileId = None
         if len(_radioDict) > 0:
-            fileId = None
             _radioPlay = True
             while _radioPlay and len(_radioDict) > 0:
                 if not fileId:
@@ -249,6 +254,7 @@ def playRadio():
         traceback.print_exc()
     finally:
         logging.debug('mp3API.playRadio() stop.')
+        return fileId
 
 
 # 停止播放广播
@@ -283,6 +289,8 @@ def clearRadio():
 
 
 # 播放政策文件
+#   返回正在播放的文件编码
+#   如果为 None 则表示文件播放结束，否则为被停止或暂停
 def playPolicy():
     global _policyFileId, _policyDict, _policyStart, _policyPlay
     logging.debug('mp3API.playPolicy().')
@@ -337,9 +345,11 @@ def playPolicy():
     except:
         traceback.print_exc()
     finally:
+        fileId = _policyFileId
         if _policyStop:
             _policyFileId, _policyStart = None, 0.0
         logging.debug('mp3API.playPolicy() %s.' %('halt' if _policyFileId else 'stop'))
+        return fileId
 
 
 # 停止播放政策
