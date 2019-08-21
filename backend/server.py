@@ -4,6 +4,7 @@
 from flask import Flask, request, jsonify, render_template
 from data_access import device, server, wifi, bracelet, settings, test_func
 import os
+import platform
 import datetime
 from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 
@@ -395,4 +396,9 @@ def get_keypad_strings():
 
 
 if __name__ == '__main__':
-    app.run(host = '0.0.0.0', port = 9999)
+    if platform.system().lower() == 'windows':
+        app.run(port = 9999)
+    elif platform.system().lower() == 'linux':
+        app.run(host = '0.0.0.0', port = 9999)
+    else:
+        pass

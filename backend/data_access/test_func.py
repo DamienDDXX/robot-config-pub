@@ -6,9 +6,8 @@ import random
 import platform
 
 from utility import audioRecord, camera
-from manager import mp3Manager
 if platform.system().lower() == 'linux':
-    from manager import buttonManager, bandManager
+    from manager import buttonAPI as button
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -182,14 +181,14 @@ def enter_keypad_test_env():
         return True, 'OK'
     elif platform.system().lower() == 'linux':
         global _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
-        buttonManager.buttonInit()
+        button.init()
         _buttonArray       = []
-        _cbButtonPower     = buttonManager.buttonPowerSetCallback(button_power)
-        _cbButtonMute      = buttonManager.buttonMuteSetCallback(button_mute)
-        _cbButtonCall      = buttonManager.buttonCallSetCallback(button_call)
-        _cbButtonPlay      = buttonManager.buttonPlaySetCallback(button_play)
-        _cbButtonIncVolume = buttonManager.buttonIncVolumeSetCallback(button_inc_volume)
-        _cbButtonDecVolume = buttonManager.buttonDecVolumeSetCallback(button_dec_volume)
+        _cbButtonPower     = button.setPowerCallback(button_power)
+        _cbButtonMute      = button.setMuteCallback(button_mute)
+        _cbButtonCall      = button.setCallCallback(button_call)
+        _cbButtonPlay      = button.setPlayCallback(button_play)
+        _cbButtonIncVolume = button.setIncVolumeCallback(button_inc_volume)
+        _cbButtonDecVolume = button.setDecVolumeCallback(button_dec_volume)
         return True, 'OK'
     else:
         return True, 'OK'
@@ -200,12 +199,12 @@ def exit_keypad_test_env():
         return True, 'OK'
     elif platform.system().lower() == 'linux':
         global _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
-        buttonManager.buttonPowerSetCallback(_cbButtonPower)
-        buttonManager.buttonMuteSetCallback(_cbButtonMute)
-        buttonManager.buttonCallSetCallback(_cbButtonCall)
-        buttonManager.buttonPlaySetCallback(_cbButtonPlay)
-        buttonManager.buttonIncVolumeSetCallback(_cbButtonIncVolume)
-        buttonManager.buttonDecVolumeSetCallback(_cbButtonDecVolume)
+        button.setPowerCallback(_cbButtonPower)
+        button.setMuteCallback(_cbButtonMute)
+        button.setCallCallback(_cbButtonCall)
+        button.setPlayCallback(_cbButtonPlay)
+        button.setIncVolumeCallback(_cbButtonIncVolume)
+        button.setDecVolumeCallback(_cbButtonDecVolume)
         return True, 'OK'
     else:
         return True, 'OK'
