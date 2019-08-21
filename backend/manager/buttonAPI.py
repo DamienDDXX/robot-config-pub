@@ -1,12 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 
-
 import RPi.GPIO as GPIO
 import logging
 
 if __name__ == '__main__':
+    import sys
     import time
+    sys.path.append('..')
+
+from utility import setLogging
 
 __all__ = [
             'init',
@@ -17,9 +20,6 @@ __all__ = [
             'setIncVolumeCallback',
             'setDecVolumeCallback',
             ]
-
-logging.basicConfig(level = logging.DEBUG,
-                    format = ' %(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s - %(message)s')
 
 # 定义按键
 BUTTON_POWER        = 8     # Key4 - 电源
@@ -85,6 +85,7 @@ def cbButton(chan):
 def init():
     global _buttonInited, _cbButtonPower, _cbButtonIncVolume, _cbButtonDecVolume, _cbButtonMute, _cbButtonPlay, _cbButtonCall
 
+    logging.debug('buttonAPI.init().')
     if not _buttonInited:
         _buttonInited       = True
         _cbButtonPlay       = None
@@ -156,12 +157,11 @@ def setDecVolumeCallback(cb):
     return cb
 
 
-# 回调函数测试
+################################################################################
+# 测试程序
 def testCallback():
-    logging.debug('test callback.')
+    logging.debug('buttonAPI.testCallback()..')
 
-
-# 执行代码
 if __name__ == '__main__':
     init()
     setPlayCallback(testCallback)
