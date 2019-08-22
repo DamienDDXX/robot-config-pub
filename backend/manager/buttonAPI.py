@@ -22,10 +22,10 @@ __all__ = [
             ]
 
 # 定义按键
-BUTTON_POWER        = 8     # Key4 - 电源
-BUTTON_INC_VOLUME   = 25    # Key3 - 音量增加
-BUTTON_DEC_VOLUME   = 24    # Key2 - 音量减少
-BUTTON_MUTE         = 23    # Key1 - 关闭自动接入
+BUTTON_POWER        = 23    # Key1 - 电源
+BUTTON_INC_VOLUME   = 24    # Key2 - 音量增加
+BUTTON_DEC_VOLUME   = 25    # Key3 - 音量减少
+BUTTON_MUTE         = 8     # Key4 - 关闭自动接入
 
 BUTTON_PLAY         =  7    # 播放
 BUTTON_CALL         = 16    # 呼叫

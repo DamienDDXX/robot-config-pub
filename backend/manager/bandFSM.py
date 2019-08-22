@@ -237,12 +237,14 @@ def init(mac = None, inv = MONITOR_INV):
 
 # 终止手环管理状态机
 def fini():
-    global _fsmFini, _fsmThread
+    global _fsmFini, _fsmThread, _eventList, _eventQueue
     logging.debug('bandFSM.fini().')
     if _fsmThread:
         _fsmFini = False
         while _fsmThread:
             time.sleep(0.5)
+    del _eventList[:]
+    _eventQueue = None
 
 
 ################################################################################
