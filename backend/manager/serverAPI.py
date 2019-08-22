@@ -40,11 +40,6 @@ _token          = None
 _rbtId          = None
 _gps            = None
 
-_playVersion    = 0
-_playUpdate     = False
-_confVersion    = 0
-_confUpdate     = False
-
 _personList     = []
 
 
@@ -249,9 +244,7 @@ def getDoctorList(personId):
 def heatbeat(playVer = None, cbUpdatePlay = None, confVer = None, cbUpdateConf = None):
     global _hostName, _portNumber, _token, _rbtId, _personList
 
-    ret = False
-    playUpdate = None
-    confUpdate = None
+    ret, playUpdate, confUpdate = False, None, None
     logging.debug('serverAPI.heartbeat() start ...')
     try:
         heatbeatUrl = _hostName + ':' + _portNumber + HEATBEAT_URL_POSTFIX
@@ -270,7 +263,6 @@ def heatbeat(playVer = None, cbUpdatePlay = None, confVer = None, cbUpdateConf =
             data['heartRate']    = person['heartRate']
             data['gps']          = _gps
             payload['data'].append(data)
-
         if playVer:
             payload['playVer'] = playVer
         if confVer:

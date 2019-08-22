@@ -26,6 +26,7 @@ __all__ = [
         'playRadio',
         'stopRadio',
         'haveRadio',
+        'haltRadio',
         'clearRadio',
         'getVolume',
         'setVolume',
@@ -39,10 +40,7 @@ elif platform.system().lower() == 'linux':
 else:
     raise NotImplementedError
 
-
-MP3_LIST_URL_POSTFIX = '/medical/robot/listMp3'         # 音频列表地址后缀
 MP3_FILE_URL_POSTFIX = '/medical/basic/file/download'   # 音频文件地址后缀
-
 
 # 局部变量
 _volume         = 0.5

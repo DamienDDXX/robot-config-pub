@@ -27,6 +27,8 @@ __all__ = [
         'putEvent',
         'getEvent',
         'updatePlay',
+        'pause',
+        'resume',
         ]
 
 # 局部变量
@@ -50,6 +52,7 @@ _machine        = None
 _states         = [
         State(name = 'stateInit',    on_enter = 'actUpdate',     ignore_invalid_triggers = True),
         State(name = 'stateIdle',                                ignore_invalid_triggers = True),
+        State(name = 'statePause',                               ignore_invalid_triggers = True),
         State(name = 'statePolicy',  on_enter = 'actPlayPolicy', ignore_invalid_triggers = True),
         State(name = 'stateRadio',   on_enter = 'actPlayRadio',  ignore_invalid_triggers = True),
         State(name = 'stateRadioEx', on_enter = 'actPlayRadio',  ignore_invalid_triggers = True),
@@ -61,6 +64,19 @@ _transitions    = [
             'source':   'stateInit',
             'dest':     'stateIdle',
             'before':   'actUpdateDone'
+        },
+        # 暂停状态 ------->
+        {
+            'trigger':  'evtResume',
+            'source':   'statePause',
+            'dest':     'stateIdle',
+        },
+        #          -------> 暂停状态
+        {
+            'trigger':  'evtPause',
+            'source':   '*',
+            'dest':     'statePause',
+            'before':   'actPause'
         },
         # 空闲状态 ------->
         {
@@ -170,18 +186,21 @@ def updateThread(callback):
     from manager import serverFSM
     global _fsm, _updateThread
     logging.debug('mp3FSM.updateThread().')
-    while not _fsmFini:
-        if mp3API.update():
-            serverFSM.setPlayUpdated()  # 通知服务器音频列表更新完成
-            break;
-        for i in range(0, 60):
-            time.sleep(1)
-            if _fsmFini:
-                break;
-    _updateThread = None
-    if callback:
-        callback()
-    logging.debug('mp3FSM.updateThread() fini.')
+    try:
+        while True:
+            if mp3API.update():
+                serverFSM.setPlayUpdated()  # 通知服务器音频列表更新完成
+                raise Exception('done')
+            for i in range(0, 60):
+                if _fsmFini:
+                    raise Exception('fini')
+                time.sleep(1)
+    except Exception, e:
+        if e.message == 'done' and callback:
+            callback()
+    finally:
+        _updateThread = None
+        logging.debug('mp3FSM.updateThread() fini.')
 
 
 # 后台播放广播
@@ -220,11 +239,18 @@ class mp3Fsm(object):
         logging.debug('mp3FSM.actUpdateDone().')
         cbUpdateDone()
 
+    # 暂停处理
+    def actPause(self):
+        logging.debug('mp3FSM.actPause().')
+        actStopRadio(self)
+        actStopPolicy(self)
+
     # 启动播放广播
     def actPlayRadio(self):
-        global _radioThread
+        global _radioThread, _playSuspend
         logging.debug('mp3FSM.actPlayRadio().')
         if not _radioThread:
+            _playSuspend = False
             _radioThread = threading.Thread(target = radioThread, args = [cbPlayDone, ])
             _radioThread.start()
             time.sleep(0.5)
@@ -241,9 +267,10 @@ class mp3Fsm(object):
 
     # 启动播放政策
     def actPlayPolicy(self):
-        global _policyThread
+        global _policyThread, _playSuspend
         logging.debug('mp3FSM.actPlayPolicy().')
         if not _policyThread:
+            _playSuspend  = False
             _policyThread = threading.Thread(target = policyThread, args = [cbPlayDone, ])
             _policyThread.start()
 
@@ -271,9 +298,9 @@ class mp3Fsm(object):
 # 向音频状态机事件队列中放事件
 def putEvent(event):
     global _eventQueue, _eventList
-    logging.debug('mp3FSM.putEvent().')
     if _eventQueue:
         if event not in _eventList and not _eventQueue.full():
+            logging.debug('mp3FSM.putEvent().')
             _eventList.append(event)
             _eventQueue.put(event)
             return True
@@ -309,17 +336,23 @@ def fsmThread():
         button.setImxCallback(cbBtnImx)
 
     # 启动状态机事件循环
-    _fsmFini = False
-    _fsm.to_stateInit()
-    while not _fsmFini:
-        time.sleep(0.5)
-        event = getEvent()
-        if event:
-            event()
-            logging.debug('mp3FSM: state - %s' %_fsm.state)
-    button.setPlayCallback(None)
-    _fsmThread = None
-    logging.debug('mp3FSM.fsmThread() fini.')
+    try:
+        _fsmFini = False
+        _fsm.to_stateInit()
+        while True:
+            if _fsmFini:
+                raise Exception('fini')
+            time.sleep(0.5)
+            event = getEvent()
+            if event:
+                event()
+                logging.debug('mp3FSM: state - %s' %_fsm.state)
+    except Exception, e:
+        pass
+    finally:
+        _fsmThread = None
+        button.setPlayCallback(None)
+        logging.debug('mp3FSM.fsmThread() fini.')
 
 
 # 初始化音频状态机
@@ -371,6 +404,18 @@ def update(callback):
 def updatePlay():
     logging.debug('mp3FSM.updatePlay().')
     update(cbUpdateDone)
+
+
+# 暂停音频状态机
+def pause():
+    logging.debug('mp3FSM.pause().')
+    putEvent(evtPause)
+
+
+# 恢复音频状态机
+def resume():
+    logging.debug('mp3FSM.resume().')
+    putEvent(evtResume)
 
 
 # 终止音频状态机
