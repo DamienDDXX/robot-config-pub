@@ -1,434 +1,423 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 
+import os
 import time
+import requests
+from pygame import mixer
 import Queue
+import string
 import platform
 import logging
+import traceback
 import threading
 from transitions import Machine, State
 
 if __name__ == '__main__':
     import sys
     sys.path.append('..')
+    from manager.buttonAPI import buttonAPI
+    from manager.serverAPI import serverAPI
 
 from utility import setLogging
-from manager import mp3API
+
+__all__ = [
+        'mp3FSM',
+        ]
+
+# 常量定义
 if platform.system().lower() == 'windows':
-    import manager.buttonSIM as button
+    MP3_DIR_ = os.getcwd()
 elif platform.system().lower() == 'linux':
-    import manager.buttonAPI as button
+    MP3_DIR_ = '/ram'
 else:
     raise NotImplementedError
 
-__all__ = [
-        'init',
-        'fini',
-        'putEvent',
-        'getEvent',
-        'updatePlay',
-        'pause',
-        'resume',
+MP3_FILE_URL_POSTFIX = '/medical/basic/file/download'   # 音频文件地址后缀
+
+VOLUME_MIN  = 0.00
+VOLUME_MAX  = 1.00
+VOLUME_INV  = 0.05
+
+# 音频状态机管理类
+class mp3FSM(object):
+    # 类初始化
+    def __init__(self, hostName, portNumber, token, getMp3List, volume = 0.5, mp3Dir = MP3_DIR_):
+        self._hostName = hostName
+        self._portNumber = portNumber
+        self._token = token
+        self._getMp3Lsit = getMp3List
+        self._playList = []
+        self._fileList = []
+        self._volume = volume
+        self._mp3Dir = MP3_DIR_
+
+        self._stopEvent  = threading.Event()
+        self._playThread = None
+
+        self._updateThread = None
+
+        self._states = [
+            State(name = 'stateInit',   on_enter = 'actUpdate',     ignore_invalid_triggers = True),
+            State(name = 'stateIdle',                               ignore_invalid_triggers = True),
+            State(name = 'stateImx',                                ignore_invalid_triggers = True),
+        ]
+        self._transitions = [
+            # 初始状态 ------->
+            {
+                'trigger':  'evtInitOk',
+                'source':   'stateInit',
+                'dest':     'stateIdle',
+            },
+            {
+                'trigger':  'evtImxOn',
+                'source':   'stateInit',
+                'dest':     'stateImx',
+                'before':   'actImxOn'
+            },
+            # 空闲状态 ------->
+            {
+                'trigger':  'evtImxOn',
+                'source':   'stateIdle',
+                'dest':     'stateImx',
+                'before':   'actImxOn'
+            },
+            {
+                'trigger':  'evtButtonPlay',
+                'source':   'stateIdle',
+                'dest':     'stateIdle',
+                'before':   'actButtonPlay'
+            },
+            {
+                'trigger':  'evtRadio',
+                'source':   'stateIdle',
+                'dest':     'stateIdle',
+                'before':   'actRadio'
+            },
+            # 通话状态 ------->
+            {
+                'trigger':  'evtImxOff',
+                'source':   'stateImx',
+                'dest':     'stateIdle',
+                'before':   'actImxOff'
+            },
         ]
 
-# 局部变量
-_volume_min     = 0.00
-_volume_max     = 1.00
-_volume_inv     = 0.05
-_radioThread    = None
-_policyThread   = None
-_updateThread   = None
+        self._machine = Machine(self, states = self._states, transitions = self._transitions, ignore_invalid_triggers = True)
+        self._eventQueue = Queue.Queue(5)
+        self._eventList = []
+        self._finiEvent = threading.Event()
+        self._fsmThread = threading.Thread(target = self.fsmThread)
+        self._fsmThread.start()
 
-_playSuspend    = False
-
-_eventQueue     = None
-_eventList      = []
-
-_fsmThread      = None
-_fsmFini        = False
-
-_fsm            = None
-_machine        = None
-_states         = [
-        State(name = 'stateInit',    on_enter = 'actUpdate',     ignore_invalid_triggers = True),
-        State(name = 'stateIdle',                                ignore_invalid_triggers = True),
-        State(name = 'statePause',                               ignore_invalid_triggers = True),
-        State(name = 'statePolicy',  on_enter = 'actPlayPolicy', ignore_invalid_triggers = True),
-        State(name = 'stateRadio',   on_enter = 'actPlayRadio',  ignore_invalid_triggers = True),
-        State(name = 'stateRadioEx', on_enter = 'actPlayRadio',  ignore_invalid_triggers = True),
-        ]
-_transitions    = [
-        # 初始状态 ------->
-        {
-            'trigger':  'evtInitOk',
-            'source':   'stateInit',
-            'dest':     'stateIdle',
-            'before':   'actUpdateDone'
-        },
-        # 暂停状态 ------->
-        {
-            'trigger':  'evtResume',
-            'source':   'statePause',
-            'dest':     'stateIdle',
-        },
-        #          -------> 暂停状态
-        {
-            'trigger':  'evtPause',
-            'source':   '*',
-            'dest':     'statePause',
-            'before':   'actPause'
-        },
-        # 空闲状态 ------->
-        {
-            'trigger':  'evtBtnPlay',
-            'source':   'stateIdle',
-            'dest':     'statePolicy'
-        },
-        {
-            'trigger':  'evtRadio',
-            'source':   'stateIdle',
-            'dest':     'stateRadio'
-        },
-        # 政策播放状态 --->
-        {
-            'trigger':  'evtRelease',
-            'source':   'statePolicy',
-            'dest':     'stateIdle'
-        },
-        {
-            'trigger':  'evtBtnPlay',
-            'source':   'statePolicy',
-            'dest':     'stateIdle',
-            'before':   'actStopPolicy'
-        },
-        {
-            'trigger':  'evtRadio',
-            'source':   'statePolicy',
-            'dest':     'stateRadioEx',
-            'before':   'actHaltPolicy'
-        },
-        # 广播播放状态
-        {
-            'trigger':  'evtBtnPlay',
-            'source':   'stateRadio',
-            'dest':     'stateIdle',
-            'before':   'actStopRadio',
-        },
-        {
-            'trigger':  'evtRelease',
-            'source':   'stateRadio',
-            'dest':     'stateIdle'
-        },
-        # 广播播放状态
-        {
-            'trigger':  'evtBtnPlay',
-            'source':   'stateRadioEx',
-            'dest':     'statePolicy',
-            'before':   'actStopRadio'
-        },
-        {
-            'trigger':  'evtRelease',
-            'source':   'stateRadioEx',
-            'dest':     'statePolicy'
-        },
-        ]
-
-
-# 播放按键动作
-def cbBtnPlay():
-    global _fsm, _fsmThread
-    logging.debug('mp3FSM.cbBtnPlay().')
-    if _fsmThread:
-        putEvent(_fsm.evtBtnPlay)
-
-
-# 音量增加按键动作
-def cbBtnIncVolume():
-    global _volume_inv, _volume_min, _volume_max
-    logging.debug('mp3FSM.cbBtnIncVolume().')
-    volume = mp3API.getVolume()
-    volume = (volume + _volume_inv) if (volume + _volume_inv) < _volume_max else _volume_max
-    mp3API.setVolume(volume)
-
-
-# 音量减少按键动作
-def cbBtnDecVolume():
-    global _volume_inv, _volume_min, _volume_max
-    logging.debug('mp3FSM.cbBtnDecVolume().')
-    volume = mp3API.getVolume()
-    volume = (volume - _volume_inv) if (volume - _volume_inv) > _volume_min else _volume_min
-    mp3API.setVolume(volume)
-
-
-# 广播模拟按键动作
-def cbBtnRadio():
-    logging.debug('mp3FSM.cbBtnRadio().')
-    update(cbUpdateDone)
-
-
-# 视频模拟按键动作
-def cbBtnImx():
-    global _fsm
-    logging.debug('mp3FSM current state: %s.' %_fsm.state)
-
-
-# 音频播放结束
-def cbPlayDone():
-    global _fsm, _playSuspend
-    logging.debug('mp3FSM.cbPlayDone().')
-    if not _playSuspend:
-        putEvent(_fsm.evtRelease)
-
-
-# 后台下载音频列表
-#   如果更新失败，则间隔 60s 后重新下载
-def updateThread(callback):
-    from manager import serverFSM
-    global _fsm, _updateThread
-    logging.debug('mp3FSM.updateThread().')
-    try:
-        while True:
-            if mp3API.update():
-                serverFSM.setPlayUpdated()  # 通知服务器音频列表更新完成
-                raise Exception('done')
-            for i in range(0, 60):
-                if _fsmFini:
+    # 音频管理状态机后台线程
+    def fsmThread(self):
+        logging.debug('mp3FSM.fsmThread().')
+        try:
+            self._finiEvent.clear()
+            self.to_stateInit()
+            while True:
+                self._finiEvent.wait(0.5)
+                if self._finiEvent.isSet():
                     raise Exception('fini')
-                time.sleep(1)
-    except Exception, e:
-        if e.message == 'done' and callback:
-            callback()
-    finally:
-        _updateThread = None
-        logging.debug('mp3FSM.updateThread() fini.')
+                event = self.getEvent()
+                if event:
+                    event()
+                    logging.debug('mp3FSM: state - %s' %self.state)
+        finally:
+            self._eventQueue = None
+            del self._eventList[:]
+            self._fsmThread = None
+            logging.debug('mp3FSM.fsmThread() fini.')
 
+    # 更新本地音频文件
+    def updateFileLocal(self):
+        logging.debug('mp3FSM.updateFileLocal().')
+        try:
+            ret = False
+            del self._fileList[:]
+            result = [(i, os.stat(i).st_mtime) for i in os.listdir(self._mp3Dir)]
+            for i in sorted(result, key = lambda x : x[1]):
+                fileName = i[0]
+                postFix = string.split(fileName, '.')[-1].lower()
+                if postFix == 'mp3':
+                    fileId = string.split(fileName, '.')[0]
+                    filePath = os.path.join(self._mp3Dir, fileName)
+                    self._fileList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': '0' })
+            ret = True
+        except:
+            traceback.print_exc()
+        finally:
+            logging.debug('mp3FSM.updateFileLocal() %s.' %('success' if ret else 'failed'))
+            return ret
 
-# 后台播放广播
-def radioThread(callback):
-    global _fsm, _radioThread
-    logging.debug('mp3FSM.radioThread().')
-    mp3API.playRadio()   # 播放广播
-    _radioThread = None
-    if callback:
-        callback()
-    logging.debug('mp3FSM.radioThread() fini.')
+    # 按优先级排序音频文件列表
+    def sortFileList(self, mp3List):
+        logging.debug('mp3FSM.sortFileList().')
+        try:
+            sortList = []
+            priList = [ '1', '0' ]
+            for pri in priList:
+                for mp3 in mp3List:
+                    postFix = ''
+                    if 'fileName' in mp3 and mp3['fileName']:
+                        postFix  = string.split(mp3['fileName'], '.')[-1].lower()
+                    if 'fileId' in mp3 and mp3['fileId'] and 'pri' in mp3 and mp3['pri'] and postFix == 'mp3':
+                        if pri == mp3['pri'] and mp3 not in sortList:
+                            sortList.append(mp3)
+        except:
+            traceback.print_exc()
+        finally:
+            return sortList
 
+    def printPlayList(self):
+        for i in self._playList:
+            print(i)
 
-# 后台播放政策
-def policyThread(callback):
-    global _fsm, _policyThread
-    logging.debug('mp3FSM.policyThread().')
-    mp3API.playPolicy()  # 播放政策
-    _policyThread = None
-    if callback:
-        callback()
-    logging.debug('mp3FSM.policyThread() fini.')
+    # 判定音频文件是否存在
+    def fileExisted(self, fileId):
+        for i in range(len(self._fileList)):
+            if self._fileList[i]['fileId'] == fileId:
+                return i
+        return None
 
+    # 更新音频文件
+    def updateThread(self):
+        logging.debug('mp3FSM.updateThread().')
+        try:
+            ret, mp3List = self._getMp3Lsit()
+            if ret:
+                newList = []
+                mp3List = self.sortFileList(mp3List)
+                self.updateFileLocal()
+                for mp3 in mp3List:
+                    try:
+                        fileId = mp3['fileId']
+                        index = self.fileExisted(fileId)
+                        if index:
+                            # 音频文件已经存在
+                            self._fileList[index]['pri'] = mp3['pri']
+                            newList.append(self._fileList[index])
+                        else:
+                            # 音频文件不存在，需要重新下载
+                            if not os.path.exists(self._mp3Dir):
+                                logging.debug('make mp3 dir.')
+                                os.mkdirs(self._mp3Dir)
+                            fileUrl = self._hostName + ':' + self._portNumber + MP3_FILE_URL_POSTFIX + '?fileId=' + fileId
+                            fileName = fileId + '.mp3'
+                            filePath = os.path.join(self._mp3Dir, fileName)
+                            logging.debug('mp3 path: %s' %filePath)
+                            if not os.path.isfile(filePath):
+                                logging.debug('download mp3 file: url - %s, token - %s' %(fileUrl, self._token))
+                                headers = { 'access_token': self._token }
+                                rsp = requests.get(fileUrl, headers = headers, stream = True, verify = False)
+                                logging.debug('download mp3 file: rsp.status_code - %d', rsp.status_code)
+                                if rsp.status_code == 200:
+                                    with open(filePath, 'wb') as mp3File:
+                                        for chunk in rsp.iter_content(chunk_size = 1024):
+                                            if chunk:
+                                                mp3File.write(chunk)
+                                    logging.debug('download mp3 file done: url - %s' %fileUrl)
+                            self._fileList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': mp3['pri'] })
+                            newList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': mp3['pri'] })
 
-# 音频状态机管理类定义
-class mp3Fsm(object):
+                        # 下载完成单个音频文件，通知状态机
+                        self.putEvent(self.evtInitOk)
+                        if mp3['pri'] == '1':
+                            self.putEvent(self.evtRadio)
+                    except:
+                        traceback.print_exc()
+                    finally:
+                        pass
+
+                # 删除原有音频列表中不需要的文件
+                for i in self._fileList:
+                    try:
+                        if i not in newList:
+                            filePath = i['filePath']
+                            if os.path.isfile(filePath):
+                                os.remove(filePath)
+                                self._fileList.remove(i)
+                    except:
+                        traceback.print_exc()
+                    finally:
+                        pass
+        except:
+            traceback.print_exc()
+        finally:
+            self._updateThread = None
+            logging.debug('mp3FSM.updateThread() fini.')
+
+    # 播放音频列表
+    def playThread(self):
+        logging.debug('mp3FSM.playThread().')
+        try:
+            self.printPlayList()
+            self._stopEvent.clear()
+            while len(self._playList) > 0:
+                filePath = self._playList[0]['filePath']
+                if os.path.isfile(filePath):
+                    logging.debug('play mp3 file: % start.' %filePath)
+                    if not mixer.get_init():
+                        mixer.init()
+                    mixer.music.set_volume(self._volume)
+                    mixer.music.load(filePath)
+                    mixer.music.play(start = self._playList[0]['pos'])
+                    while True:
+                        self._stopEvent.wait(0.5)
+                        if self._stopEvent.isSet():
+                            self._playList[0]['pos'] = float(mixer.music.get_pos()) / 1000
+                            raise Exception('stop')
+                        else:
+                            if not mixer.music.get_busy():
+                                # 播放完毕，切换到下一首
+                                del self._playList[0]
+                                break
+                        if self._volume != mixer.music.get_volume():
+                            mixer.music.set_volume(self._volume)
+                else:
+                    del self._playList[0]
+        except Exception, e:
+            if e.message == 'stop':
+                pass
+            else:
+                traceback.print_exc()
+        finally:
+            mixer.music.stop()
+            mixer.quit()
+            self._playThread = None
+            logging.debug('mp3FSM.playThread() fini.')
+
+    # 终止音频状态机线程
+    def fini(self):
+        logging.debug('mp3FSM.fini().')
+        self._finiEvent.set()
+        self._stopEvent.set()
+        while self._fsmThread and self._playThread:
+            time.sleep(0.5)
+
+    # 向音频状态机事件队列发送事件
+    def putEvent(self, event):
+        if self._eventQueue:
+            if event not in self._eventList and not self._eventQueue.full():
+                logging.debug('mp3FSM.putEvent().')
+                self._eventList.append(event)
+                self._eventQueue.put(event)
+                return True
+        return False
+
+    # 从音频状态机事件队列提取事件
+    def getEvent(self):
+        if self._eventQueue:
+            if not self._eventQueue.empty():
+                logging.debug('mp3FSM.getEvent().')
+                event = self._eventQueue.get()
+                self._eventQueue.task_done()
+                if event in self._eventList:
+                    self._eventList.remove(event)
+                return event
+        return None
+
+    # 播放按键回调函数
+    def cbButtonPlay(self):
+        logging.debug('mp3FSM.cbButtonPlay().')
+        self.putEvent(self.evtButtonPlay)
+
+    # 音量增加键回调函数
+    def cbButtonIncVolume(self):
+        volume = self._volume + VOLUME_INV
+        self._volume = volume if volume < VOLUME_MAX else VOLUME_MAX
+        logging.debug('mp3FSM.cbButtonIncVolume(%f).' %self._volume)
+
+    # 音量减少键回调函数
+    def cbButtonDecVolume(self):
+        volume = self._volume - VOLUME_INV
+        self._volume = volume if volume > VOLUME_MIN else VOLUME_MIN
+        logging.debug('mp3FSM.cbButtonDecVolume(%f).' %self._volume)
+
+    # 广播模拟按键回调函数
+    def cbButtonRadio(self):
+        logging.debug('mp3FSM.cbButtonRadio().')
+        if not self._updateThread:
+            self._updateThread = threading.Thread(target = self.updateThread)
+            self._updateThread.start()
+
+    # 视频模拟按键动作
+    def cbButtonImx(self):
+        logging.debug('mp3FSM.cbButtonImx().')
+        if self.state == 'stateImx':
+            self.putEvent(self.evtImxOff)
+        else:
+            self.putEvent(self.evtImxOn)
+
     # 更新音频列表
     def actUpdate(self):
-        global _hostName, _portNumber, _token
         logging.debug('mp3FSM.actUpdate().')
-        mp3API.init(_hostName, _portNumber, _token)
-        update(cbInitOk)
+        if not self._updateThread:
+            self._updateThread = threading.Thread(target = self.updateThread)
+            self._updateThread.start()
 
-    # 更新完成处理
-    def actUpdateDone(self):
-        logging.debug('mp3FSM.actUpdateDone().')
-        cbUpdateDone()
+    # 处理播放按键
+    def actButtonPlay(self):
+        logging.debug('mp3FSM.actButtonPlay().')
+        if not self._playThread:
+            # 开始播放政策
+            del self._playList[:]
+            for i in self._fileList:
+                if i['pri'] == '0':
+                    self._playList.append({ 'fileId': i['fileId'], 'filePath': i['filePath'], 'pri': '0', 'pos': 0.0 })
+        else:
+            self._stopEvent.set()
+            while self._playThread:
+                time.sleep(0.5)
+            if self._playList[0]['pri'] == '1':
+                # 正在播放广播
+                self.printPlayList()
+                while len(self._playList) > 0 and self._playList[0]['pri'] == '1':
+                    del self._playList[0]
+                    self.printPlayList()
+            else:
+                # 正在播放政策
+                del self._playList[:]
+        if len(self._playList) > 0:
+            self._playThread = threading.Thread(target = self.playThread)
+            self._playThread.start()
 
-    # 暂停处理
-    def actPause(self):
-        logging.debug('mp3FSM.actPause().')
-        actStopRadio(self)
-        actStopPolicy(self)
-
-    # 启动播放广播
-    def actPlayRadio(self):
-        global _radioThread, _playSuspend
-        logging.debug('mp3FSM.actPlayRadio().')
-        if not _radioThread:
-            _playSuspend = False
-            _radioThread = threading.Thread(target = radioThread, args = [cbPlayDone, ])
-            _radioThread.start()
-            time.sleep(0.5)
-
-    # 停止播放广播
-    def actStopRadio(self):
-        global _radioThread, _playSuspend
-        logging.debug('mp3FSM.actStopRadio().')
-        if _radioThread:
-            _playSuspend = True
-            mp3API.stopRadio()
-            while _radioThread:
+    # 处理广播播放
+    def actRadio(self):
+        logging.debug('mp3FSM.actRadio().')
+        if self._playThread:
+            self._stopEvent.set()
+            while self._playThread:
                 time.sleep(0.5)
 
-    # 启动播放政策
-    def actPlayPolicy(self):
-        global _policyThread, _playSuspend
-        logging.debug('mp3FSM.actPlayPolicy().')
-        if not _policyThread:
-            _playSuspend  = False
-            _policyThread = threading.Thread(target = policyThread, args = [cbPlayDone, ])
-            _policyThread.start()
+        playList = []
+        for i in self._fileList:
+            if i['pri'] == '1':
+                playList.append({ 'fileId': i['fileId'], 'filePath': i['filePath'], 'pri': '1', 'pos': 0.0 })
+        for i in self._playList:
+            if i['pri'] == '0':
+                playList.append(i)
+        self._playList = playList
+        if len(self._playList) > 0:
+            self._playThread = threading.Thread(target = self.playThread)
+            self._playThread.start()
 
-    # 停止播放政策
-    def actStopPolicy(self):
-        global _policyThread, _playSuspend
-        logging.debug('mp3FSM.actStopPolicy().')
-        if _policyThread:
-            _playSuspend = True
-            mp3API.stopPolicy()
-            while _policyThread:
+    # 处理视频开始
+    def actImxOn(self):
+        logging.debug('mp3FSM.actImxOn().')
+        if self._playThread:
+            self._stopEvent.set()
+            while self._playThread:
                 time.sleep(0.5)
 
-    # 暂停播放政策
-    def actHaltPolicy(self):
-        global _policyThread, _playSuspend
-        logging.debug('mp3FSM.actHaltPolicy().')
-        if _policyThread:
-            _playSuspend = True
-            mp3API.haltPolicy()
-            while _policyThread:
-                time.sleep(0.5)
+    # 处理视频结束
+    def actImxOff(self):
+        logging.debug('mp3FSM.actImxOff().')
+        if len(self._playList) > 0 and not self._playThread:
+            self._playThread = threading.Thread(target = self.playThread)
+            self._playThread.start()
 
-
-# 向音频状态机事件队列中放事件
-def putEvent(event):
-    global _eventQueue, _eventList
-    if _eventQueue:
-        if event not in _eventList and not _eventQueue.full():
-            logging.debug('mp3FSM.putEvent().')
-            _eventList.append(event)
-            _eventQueue.put(event)
-            return True
-    return False
-
-
-# 从音频状态机事件队列中取事件
-def getEvent():
-    global _eventQueue, _eventList
-    if _eventQueue:
-        if not _eventQueue.empty():
-            logging.debug('mp3FSM.getEvent().')
-            event = _eventQueue.get()
-            _eventQueue.task_done()
-            if event in _eventList:
-                _eventList.remove(event)
-            return event
-    return None
-
-
-# 音频状态机后台线程
-def fsmThread():
-    global _fsmFini, _fsmThread, _fsm
-    logging.debug('mp3FSM.fsmThread().')
-
-    # 初始化按键
-    button.init()
-    button.setPlayCallback(cbBtnPlay)
-    button.setIncVolumeCallback(cbBtnIncVolume)
-    button.setDecVolumeCallback(cbBtnDecVolume)
-    if platform.system().lower() == 'windows':
-        button.setRadioCallback(cbBtnRadio)
-        button.setImxCallback(cbBtnImx)
-
-    # 启动状态机事件循环
-    try:
-        _fsmFini = False
-        _fsm.to_stateInit()
-        while True:
-            if _fsmFini:
-                raise Exception('fini')
-            time.sleep(0.5)
-            event = getEvent()
-            if event:
-                event()
-                logging.debug('mp3FSM: state - %s' %_fsm.state)
-    except Exception, e:
-        pass
-    finally:
-        _fsmThread = None
-        button.setPlayCallback(None)
-        logging.debug('mp3FSM.fsmThread() fini.')
-
-
-# 初始化音频状态机
-def init(hostName, portNumber, token):
-    global _hostName, _portNumber, _token
-    global _fsm, _machine, _states, _transitions
-    global _eventQueue, _eventList
-    global _fsmThread
-    logging.debug('mp3FSM.init(%s, %s, %s).' %(hostName, portNumber, token))
-    if not _fsm:
-        _hostName = hostName
-        _portNumber = portNumber
-        _token = token
-        _fsm = mp3Fsm()
-        _machine = Machine(_fsm, states = _states, transitions = _transitions, ignore_invalid_triggers = True)
-        _eventQueue = Queue.Queue(5)
-        del _eventList[:]
-        if not _fsmThread:
-            _fsmThread = threading.Thread(target = fsmThread)
-            _fsmThread.start()
-
-
-# 音频初始化完成回调函数
-def cbInitOk():
-    global _fsm
-    logging.debug('mp3FSM.cbInitOk()')
-    putEvent(_fsm.evtInitOk)
-
-
-# 音频更新完成回调函数
-def cbUpdateDone():
-    global _fsm
-    logging.debug('mp3FSM.cbUpdateDone()')
-    if mp3API.haveRadio():
-        putEvent(_fsm.evtRadio)     # 通知播放广播
-
-
-# 更新音频文件
-def update(callback):
-    global _updateThread
-    logging.debug('mp3FSM.update().')
-    if not _updateThread:
-        # 启动后台更新音频文件
-        _updateThread = threading.Thread(target = updateThread, args = [callback, ])
-        _updateThread.start()
-
-
-# 更新音频列表
-def updatePlay():
-    logging.debug('mp3FSM.updatePlay().')
-    update(cbUpdateDone)
-
-
-# 暂停音频状态机
-def pause():
-    logging.debug('mp3FSM.pause().')
-    putEvent(evtPause)
-
-
-# 恢复音频状态机
-def resume():
-    logging.debug('mp3FSM.resume().')
-    putEvent(evtResume)
-
-
-# 终止音频状态机
-def fini():
-    global _fsm, _fsmFini, _fsmThread
-    logging.debug('mp3FSM.fini().')
-    if _fsm:
-        _fsm.actStopRadio()     # 停止广播播放线程
-        _fsm.actStopPolicy()    # 停止政策播放线程
-    if _fsmThread:
-        _fsmFini = True         # 停止状态机线程
-        while _fsmThread:
-            time.sleep(0.5)
 
 
 ###############################################################################
@@ -436,15 +425,19 @@ def fini():
 if __name__ == '__main__':
     import manager.serverAPI
     try:
-        hostName    = 'https://ttyoa.com'
-        portNumber  = '8098'
-        robotId     = 'b827eb319c88'
-        manager.serverAPI.init(hostName, portNumber, robotId)
-        ret, token = manager.serverAPI.login()
+        hostName, portNumber, robotId = 'https://ttyoa.com', '8098', 'b827eb319c88'
+        sa = serverAPI(hostName = hostName, portNumber = portNumber, robotId = robotId)
+        ret, token = sa.login()
         if ret:
-            init(hostName, portNumber, token)
+            mf = mp3FSM(hostName = hostName, portNumber = portNumber, token = token, getMp3List = sa.getMp3List)
+            ba = buttonAPI()
+            ba.setPlayCallback(mf.cbButtonPlay)
+            ba.setIncVolumeCallback(mf.cbButtonIncVolume)
+            ba.setDecVolumeCallback(mf.cbButtonDecVolume)
+            ba.setRadioCallback(mf.cbButtonRadio)
+            ba.setImxCallback(mf.cbButtonImx)
             while (1):
                 time.sleep(1)
     except KeyboardInterrupt:
-        fini()
+        mf.fini()
         sys.exit(0)
