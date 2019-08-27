@@ -54,7 +54,6 @@ class mp3FSM(object):
 
         self._stopEvent  = threading.Event()
         self._playThread = None
-
         self._updateThread = None
 
         self._states = [
@@ -178,7 +177,7 @@ class mp3FSM(object):
         return None
 
     # 更新音频文件
-    def updateThread(self):
+    def updateThread(self, cbUpdateDone):
         logging.debug('mp3FSM.updateThread().')
         try:
             ret, mp3List = self._getMp3Lsit()
@@ -238,6 +237,8 @@ class mp3FSM(object):
                     finally:
                         pass
                 self._fileList = newList
+                if cbUpdateDone:
+                    cbUpdateDone()
         except:
             traceback.print_exc()
         finally:
@@ -333,6 +334,13 @@ class mp3FSM(object):
                 return event
         return None
 
+    # 更新音频文件
+    def update(self, cbDone):
+        logging.debug('mp3FSM.update().')
+        if not self._updateThread:
+            self._updateThread = threading.Thread(target = self.updateThread, args = [cbDone, ])
+            self._updateThread.start()
+
     # 播放按键回调函数
     def cbButtonPlay(self):
         logging.debug('mp3FSM.cbButtonPlay().')
@@ -353,9 +361,7 @@ class mp3FSM(object):
     # 广播模拟按键回调函数
     def cbButtonRadio(self):
         logging.debug('mp3FSM.cbButtonRadio().')
-        if not self._updateThread:
-            self._updateThread = threading.Thread(target = self.updateThread)
-            self._updateThread.start()
+        self.update(None)
 
     # 视频模拟按键动作
     def cbButtonImx(self):
@@ -368,9 +374,7 @@ class mp3FSM(object):
     # 更新音频列表
     def actUpdate(self):
         logging.debug('mp3FSM.actUpdate().')
-        if not self._updateThread:
-            self._updateThread = threading.Thread(target = self.updateThread)
-            self._updateThread.start()
+        self.update(None)
 
     # 处理播放按键
     def actButtonPlay(self):

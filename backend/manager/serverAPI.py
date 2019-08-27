@@ -29,15 +29,15 @@ DOCTOR_LIST_URL_POSTFIX = '/medical/robot/listOnlineDoctor' # 在线医生列表
 class serverAPI(object):
     # 初始化
     def __init__(self, hostName, portNumber, robotId):
-        self._hostName   = hostName
+        self._hostName = hostName
         self._portNumber = portNumber
-        self._robotId    = robotId
-        self._token      = None
-        self._rbtId      = None
+        self._robotId = robotId
+        self._token = None
+        self._rbtId = None
         self._personList = []
 
         _, settings = data_access.settings.get_settings()
-        self._gps        = settings['gpsCoord']
+        self._gps = settings['gpsCoord']
         requests.packages.urllib3.disable_warnings()
 
     # 获取登录令牌
@@ -264,25 +264,25 @@ class serverAPI(object):
 ################################################################################
 # 测试程序
 if __name__ == '__main__':
-    server = serverAPI('https://ttyoa.com', '8098', 'b827eb319c88')
+    sa = serverAPI(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = 'b827eb319c88')
     # 测试登录
-    ret, _ = server.login()
+    ret, _ = sa.login()
     if ret:
         # 测试获取配置
-        ret, vsvrIp, vsvrPort, personList = server.getConfig()
+        ret, vsvrIp, vsvrPort, personList = sa.getConfig()
         if ret:
             print(vsvrIp, vsvrPort, personList)
             # 测试获取医生列表
-            ret, doctorList = server.getDoctorList(personList[0]['personId'])
+            ret, doctorList = sa.getDoctorList(personList[0]['personId'])
             if ret:
                 print(doctorList)
 
         # 测试获取音频列表
-        ret, mp3List = server.getMp3List()
+        ret, mp3List = sa.getMp3List()
         if ret:
             print(mp3List)
 
         # 测试心跳同步
-        ret, playUpdate, confUpdate = server.heatbeat()
+        ret, playUpdate, confUpdate = sa.heatbeat()
         if ret:
             print(playUpdate, confUpdate)
