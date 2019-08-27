@@ -170,10 +170,6 @@ class mp3FSM(object):
         finally:
             return sortList
 
-    def printPlayList(self):
-        for i in self._playList:
-            print(i)
-
     # 判定音频文件是否存在
     def fileExisted(self, fileId):
         for i in range(len(self._fileList)):
@@ -192,11 +188,11 @@ class mp3FSM(object):
                 self.updateFileLocal()
                 for mp3 in mp3List:
                     try:
-                        fileId = mp3['fileId']
+                        fileId = mp3['fileId'].encode('ascii')
                         index = self.fileExisted(fileId)
                         if index:
                             # 音频文件已经存在
-                            self._fileList[index]['pri'] = mp3['pri']
+                            self._fileList[index]['pri'] = mp3['pri'].encode('ascii')
                             newList.append(self._fileList[index])
                         else:
                             # 音频文件不存在，需要重新下载
@@ -218,12 +214,12 @@ class mp3FSM(object):
                                             if chunk:
                                                 mp3File.write(chunk)
                                     logging.debug('download mp3 file done: url - %s' %fileUrl)
-                            self._fileList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': mp3['pri'] })
-                            newList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': mp3['pri'] })
+                            self._fileList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': mp3['pri'].encode('ascii') })
+                            newList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': mp3['pri'].encode('ascii') })
 
                         # 下载完成单个音频文件，通知状态机
                         self.putEvent(self.evtInitOk)
-                        if mp3['pri'] == '1':
+                        if mp3['pri'].encode('ascii') == '1':
                             self.putEvent(self.evtRadio)
                     except:
                         traceback.print_exc()
@@ -237,22 +233,40 @@ class mp3FSM(object):
                             filePath = i['filePath']
                             if os.path.isfile(filePath):
                                 os.remove(filePath)
-                                self._fileList.remove(i)
                     except:
                         traceback.print_exc()
                     finally:
                         pass
+                self._fileList = newList
         except:
             traceback.print_exc()
         finally:
             self._updateThread = None
             logging.debug('mp3FSM.updateThread() fini.')
 
+    # 清除所有广播文件
+    def clearRadio(self):
+        logging.debug('mp3FSM.clearRadio().')
+        fileList = []
+        for i in self._fileList:
+            if i['pri'] == '0':
+                fileList.append(i)
+            else:
+                filePath = i['filePath']
+                if os.path.isfile(filePath):
+                    try:
+                        os.remove(filePath)
+                    except:
+                        traceback.print_exc()
+                    finally:
+                        pass
+        self._fileList = fileList
+
     # 播放音频列表
     def playThread(self):
         logging.debug('mp3FSM.playThread().')
         try:
-            self.printPlayList()
+            removeList = []
             self._stopEvent.clear()
             while len(self._playList) > 0:
                 filePath = self._playList[0]['filePath']
@@ -263,6 +277,8 @@ class mp3FSM(object):
                     mixer.music.set_volume(self._volume)
                     mixer.music.load(filePath)
                     mixer.music.play(start = self._playList[0]['pos'])
+                    if self._playList[0]['pri'] == '0':
+                        self.clearRadio()
                     while True:
                         self._stopEvent.wait(0.5)
                         if self._stopEvent.isSet():
@@ -271,7 +287,6 @@ class mp3FSM(object):
                         else:
                             if not mixer.music.get_busy():
                                 # 播放完毕，切换到下一首
-                                del self._playList[0]
                                 break
                         if self._volume != mixer.music.get_volume():
                             mixer.music.set_volume(self._volume)
@@ -370,15 +385,16 @@ class mp3FSM(object):
             self._stopEvent.set()
             while self._playThread:
                 time.sleep(0.5)
+
             if self._playList[0]['pri'] == '1':
                 # 正在播放广播
-                self.printPlayList()
                 while len(self._playList) > 0 and self._playList[0]['pri'] == '1':
                     del self._playList[0]
-                    self.printPlayList()
             else:
                 # 正在播放政策
                 del self._playList[:]
+
+        self.clearRadio()
         if len(self._playList) > 0:
             self._playThread = threading.Thread(target = self.playThread)
             self._playThread.start()
