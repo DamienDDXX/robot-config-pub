@@ -16,15 +16,22 @@ from manager.bandAPI import bandAPI
 
 __all__ = [
         'bandFSM',
+        'gBandFSM',
         ]
 
+# 宏定义
 MONITOR_INV = 30 * 60
 
+# 全局变量
+gBandFSM = NOne
 
 # 手环管理状态机类
 class bandFSM(object):
     # 初始化
     def __init__(self, inv = MONITOR_INV):
+        global gBandFSM
+        gBandFSM = self
+
         self._bandAPI = bandAPI()
         self._inv = inv
         _, self._mac = self._bandAPI.getBand()

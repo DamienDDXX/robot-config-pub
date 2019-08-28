@@ -15,6 +15,7 @@ from utility import setLogging
 
 __all__ = [
         'bandAPI',
+        'gBandAPI'
         ]
 
 
@@ -45,11 +46,16 @@ onWriteResponseCallback_t   = CFUNCTYPE(None, c_ushort, c_ushort, c_ushort)
 onHvxCallback_t             = CFUNCTYPE(None, c_ushort, c_ushort, c_ubyte_p, c_ushort)
 onTxCompleteCallback_t      = CFUNCTYPE(None, c_ushort)
 
+# 全局变量
+gBandAPI = None
 
 # 手环接口类
 class bandAPI(object):
     # 类初始化
     def __init__(self):
+        global gBandAPI
+        gBandAPI = self
+
         self._cdll = cdll.LoadLibrary(BLE_LIBRARY_PATH)
         self._band = None
 

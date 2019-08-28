@@ -19,15 +19,22 @@ from manager.buttonAPI import buttonAPI
 
 __all__ = [
         'serverFSM',
+        'gServerFSM',
         ]
 
 # HEARTBEAT_INV = 10 * 60
 HEARTBEAT_INV   = 60
 
+# 全局变量
+gServerFSM = None
+
 # 系统服务器状态机类定义
 class serverFSM(object):
     # 初始化
     def __init__(self, hostName, portNumber, robotId, heartbeatInt = 10 * 60):
+        global gServerFSM
+        gServerFSM = self
+
         self._hostName = hostName
         self._portNumber = portNumber
         self._robotId = robotId

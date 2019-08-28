@@ -15,6 +15,7 @@ from utility import setLogging
 
 __all__ = [
         'serverAPI',
+        'gServerAPI',
         ]
 
 LOGIN_URL_POSTFIX       = '/medical/auth/robot/login'       # 机器人登录地址后缀
@@ -25,10 +26,16 @@ MP3_LIST_URL_POSTFIX    = '/medical/robot/listMp3'          # 音频列表地址
 DOCTOR_LIST_URL_POSTFIX = '/medical/robot/listOnlineDoctor' # 在线医生列表地址
 
 
+# 全局变量
+gServerAPI = None
+
 # 服务器接口类
 class serverAPI(object):
     # 初始化
     def __init__(self, hostName, portNumber, robotId):
+        global gServerAPI
+        gServerAPI = self
+
         self._hostName = hostName
         self._portNumber = portNumber
         self._robotId = robotId

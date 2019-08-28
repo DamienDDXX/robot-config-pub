@@ -23,6 +23,7 @@ else:
 
 __all__ = [
             'buttonAPI',
+            'gButtonAPI',
             ]
 
 # 定义按键
@@ -48,12 +49,16 @@ elif platform.system().lower() == 'windows':
 else:
     raise NotImplementedError
 
+# 全局变量
+gButtonAPI  = None
 
 # 按键接口类
 class buttonAPI(object):
     # 初始化
     def __init__(self):
-        logging.debug('buttonAPI.init().')
+        global gButtonAPI
+        gButtonAPI = self
+
         self._cbButtonPlay      = None    # 播放按键回调函数指针
         self._cbButtonMute      = None    # 自动接入按键回调函数指针
         self._cbButtonCall      = None    # 呼叫按键回调函数指针

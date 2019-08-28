@@ -23,6 +23,7 @@ from utility import setLogging
 
 __all__ = [
         'mp3FSM',
+        'gMp3FSM',
         ]
 
 # 常量定义
@@ -39,10 +40,16 @@ VOLUME_MIN  = 0.00
 VOLUME_MAX  = 1.00
 VOLUME_INV  = 0.05
 
+# 全局变量
+gMp3FSM = None
+
 # 音频状态机管理类
 class mp3FSM(object):
     # 类初始化
     def __init__(self, hostName, portNumber, token, getMp3List, volume = 0.5, mp3Dir = MP3_DIR_):
+        global gMp3FSM
+        gMp3FSM = self
+
         self._hostName = hostName
         self._portNumber = portNumber
         self._token = token

@@ -6,8 +6,7 @@ import random
 import platform
 
 from utility import audioRecord, camera
-if platform.system().lower() == 'linux':
-    from manager.buttonAPI import buttonAPI
+from manager.buttonAPI import buttonAPI, gButtonAPI
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -178,52 +177,35 @@ def button_dec_volume():
 
 
 def enter_keypad_test_env():
-    if platform.system().lower() == 'windows':
-        return True, 'OK'
-    elif platform.system().lower() == 'linux':
-        global _buttonAPI, _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
-        if not _buttonAPI:
-            _buttonAPI = buttonAPI()
-            _buttonArray       = []
-            _cbButtonPower     = _buttonAPI.setPowerCallback(button_power)
-            _cbButtonMute      = _buttonAPI.setMuteCallback(button_mute)
-            _cbButtonCall      = _buttonAPI.setCallCallback(button_call)
-            _cbButtonPlay      = _buttonAPI.setPlayCallback(button_play)
-            _cbButtonIncVolume = _buttonAPI.setIncVolumeCallback(button_inc_volume)
-            _cbButtonDecVolume = _buttonAPI.setDecVolumeCallback(button_dec_volume)
-        return True, 'OK'
-    else:
-        return True, 'OK'
+    global gButtonAPI, _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
+    if not gButtonAPI:
+        gButtonAPI = buttonAPI()
+    _buttonArray       = []
+    _cbButtonPower     = gButtonAPI.setPowerCallback(button_power)
+    _cbButtonMute      = gButtonAPI.setMuteCallback(button_mute)
+    _cbButtonCall      = gButtonAPI.setCallCallback(button_call)
+    _cbButtonPlay      = gButtonAPI.setPlayCallback(button_play)
+    _cbButtonIncVolume = gButtonAPI.setIncVolumeCallback(button_inc_volume)
+    _cbButtonDecVolume = gButtonAPI.setDecVolumeCallback(button_dec_volume)
+    return True, 'OK'
 
 
 def exit_keypad_test_env():
-    if platform.system().lower() == 'windows':
-        return True, 'OK'
-    elif platform.system().lower() == 'linux':
-        global _buttonAPI, _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
-        if _buttonAPI:
-            _buttonAPI.setPowerCallback(_cbButtonPower)
-            _buttonAPI.setMuteCallback(_cbButtonMute)
-            _buttonAPI.setCallCallback(_cbButtonCall)
-            _buttonAPI.setPlayCallback(_cbButtonPlay)
-            _buttonAPI.setIncVolumeCallback(_cbButtonIncVolume)
-            _buttonAPI.setDecVolumeCallback(_cbButtonDecVolume)
-        return True, 'OK'
-    else:
-        return True, 'OK'
+    global gButtonAPI, _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
+    if not gButtonAPI:
+        gButtonAPI = buttonAPI()
+    gButtonAPI.setPowerCallback(_cbButtonPower)
+    gButtonAPI.setMuteCallback(_cbButtonMute)
+    gButtonAPI.setCallCallback(_cbButtonCall)
+    gButtonAPI.setPlayCallback(_cbButtonPlay)
+    gButtonAPI.setIncVolumeCallback(_cbButtonIncVolume)
+    gButtonAPI.setDecVolumeCallback(_cbButtonDecVolume)
+    return True, 'OK'
 
 
 def get_keypad_strings():
-    if platform.system().lower() == 'windows':
-        arr = ['呼叫键', '音量增加', '音量减少', '功能键']
-        num = random.randint(1, 5)
-        random.shuffle(arr)
-        return True, arr[0: num]
-    elif platform.system().lower() == 'linux':
-        global _buttonArray
-        return True, _buttonArray
-    else:
-        return True, 'OK'
+    global _buttonArray
+    return True, _buttonArray
 
 
 # camera, 测试摄像头

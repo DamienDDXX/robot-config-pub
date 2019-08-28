@@ -400,16 +400,16 @@ def get_keypad_strings():
 
 if __name__ == '__main__':
     # 获取服务器设置信息
-    _, server_info = data_access.server.get_server_info()
-    hostName = server_info['address']
-    portNumber = server_info['port']
+    # _, server_info = data_access.server.get_server_info()
+    # hostName = server_info['address']
+    # portNumber = server_info['port']
 
     # 获取设备地址
-    _, device_info = data_access.device.get_device_info()
-    robotId = device_info['seriesNumber']
-    robotId = 'b827eb319c88'
+    # _, device_info = data_access.device.get_device_info()
+    # robotId = device_info['seriesNumber']
+    # robotId = 'b827eb319c88'
 
-    sf = serverFSM(hostName = hostName, portNumber = portNumber, robotId = robotId)
+    # sf = serverFSM(hostName = hostName, portNumber = portNumber, robotId = robotId)
     if platform.system().lower() == 'windows':
         app.run(port = 9999)
     elif platform.system().lower() == 'linux':
