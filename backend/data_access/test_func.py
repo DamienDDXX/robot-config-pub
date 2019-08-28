@@ -7,17 +7,18 @@ import platform
 
 from utility import audioRecord, camera
 if platform.system().lower() == 'linux':
-    from manager import buttonAPI as button
+    from manager.buttonAPI import buttonAPI
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 # 局部变量
-_buttonArray = []
+_buttonArray   = []
+_buttonAPI     = None
 _cbButtonPower = None
-_cbButtonMute = None
-_cbButtonCall = None
-_cbButtonPlay = None
+_cbButtonMute  = None
+_cbButtonCall  = None
+_cbButtonPlay  = None
 _cbButtonIncVolume = None
 _cbButtonDecVolume = None
 
@@ -180,15 +181,16 @@ def enter_keypad_test_env():
     if platform.system().lower() == 'windows':
         return True, 'OK'
     elif platform.system().lower() == 'linux':
-        global _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
-        button.init()
-        _buttonArray       = []
-        _cbButtonPower     = button.setPowerCallback(button_power)
-        _cbButtonMute      = button.setMuteCallback(button_mute)
-        _cbButtonCall      = button.setCallCallback(button_call)
-        _cbButtonPlay      = button.setPlayCallback(button_play)
-        _cbButtonIncVolume = button.setIncVolumeCallback(button_inc_volume)
-        _cbButtonDecVolume = button.setDecVolumeCallback(button_dec_volume)
+        global _buttonAPI, _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
+        if not _buttonAPI:
+            _buttonAPI = buttonAPI()
+            _buttonArray       = []
+            _cbButtonPower     = _buttonAPI.setPowerCallback(button_power)
+            _cbButtonMute      = _buttonAPI.setMuteCallback(button_mute)
+            _cbButtonCall      = _buttonAPI.setCallCallback(button_call)
+            _cbButtonPlay      = _buttonAPI.setPlayCallback(button_play)
+            _cbButtonIncVolume = _buttonAPI.setIncVolumeCallback(button_inc_volume)
+            _cbButtonDecVolume = _buttonAPI.setDecVolumeCallback(button_dec_volume)
         return True, 'OK'
     else:
         return True, 'OK'
@@ -198,13 +200,14 @@ def exit_keypad_test_env():
     if platform.system().lower() == 'windows':
         return True, 'OK'
     elif platform.system().lower() == 'linux':
-        global _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
-        button.setPowerCallback(_cbButtonPower)
-        button.setMuteCallback(_cbButtonMute)
-        button.setCallCallback(_cbButtonCall)
-        button.setPlayCallback(_cbButtonPlay)
-        button.setIncVolumeCallback(_cbButtonIncVolume)
-        button.setDecVolumeCallback(_cbButtonDecVolume)
+        global _buttonAPI, _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
+        if _buttonAPI:
+            _buttonAPI.setPowerCallback(_cbButtonPower)
+            _buttonAPI.setMuteCallback(_cbButtonMute)
+            _buttonAPI.setCallCallback(_cbButtonCall)
+            _buttonAPI.setPlayCallback(_cbButtonPlay)
+            _buttonAPI.setIncVolumeCallback(_cbButtonIncVolume)
+            _buttonAPI.setDecVolumeCallback(_cbButtonDecVolume)
         return True, 'OK'
     else:
         return True, 'OK'

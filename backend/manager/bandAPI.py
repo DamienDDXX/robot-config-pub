@@ -11,7 +11,6 @@ if __name__ == '__main__':
     import sys
     sys.path.append('..')
 
-from data_access import bracelet
 from utility import setLogging
 
 __all__ = [
@@ -345,6 +344,7 @@ class bandAPI(object):
 
     # 获取手环配置
     def getBand(self):
+        from data_access import bracelet
         logging.debug('bandAPI.getBand().')
         ret, band = False, None
         try:
