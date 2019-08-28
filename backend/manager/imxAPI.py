@@ -143,9 +143,19 @@ class imxAPI(object):
         self._loginEvent = threading.Event()
         self._loginEvent.clear()
 
-        self._callValue = False
-        self._callEvent = threading.Event()
-        self._callEvent.clear()
+        self._cbCallEventUnkown = None
+        self._cbCallEventCalling = None
+        self._cbCallEventIncoming = None
+        self._cbCallEventProceeding = None
+        self._cbCallEventAccept = None
+        self._cbCallEventDecline = None
+        self._cbCallEventBusy = None
+        self._cbCallEventUnreachable = None
+        self._cbCallEventOffline = None
+        self._cbCallEventHangup = None
+        self._cbCallEventRelease = None
+        self._cbCallEventTimeout = None
+        self._cbCallEventSomeerror = None
 
         self._cbSysEvent = sys_event_callback_t(self.cbSysEvent)
         self._cbLogin = login_callback_t(self.cbLogin)
@@ -230,6 +240,10 @@ class imxAPI(object):
             return True
         logging.debug('imxAPI.accept(%s) failed, error code: %d' %(self._callId, error))
         return False
+
+    # 判断是否接听视频
+    def accepted(self):
+        return True if self._callValue == ce_accept.value else False
 
     # 拒接视频呼叫
     def decline(self):
@@ -343,20 +357,48 @@ class imxAPI(object):
 
     # 呼叫事件处理回调函数
     def cbCallEvent(self, notify, data):
-        self._callEvent.set()
-        self._callValue = notify.eEvent
         logging.debug('imxAPI.cbCallEvent(): event - %d, userId - %s, callId - %s, descript - %s' %(notify.eEvent, notify.szUserID, notify.szCallID, self.callEventDescript(notify.eEvent)))
-        if notify.eEvent == ce_incoming.value:
-            # 外部呼入
+        if notify.eEvent == ce_unknown.value:       # 未知错误
+            if self._cbCallEventUnkown:
+                self._cbCallEventUnkown()
+        elif notify.eEvent == ce_calling.value:     # 正在外呼
+            if self._cbCallEventCalling:
+                self._cbCallEventCalling()
+        elif notify.eEvent == ce_incoming.value:    # 正在呼入
             logging.debug('incoming call:  caller - %s, callId - %s' %(notify.szUserID, notify.szUserID))
-        elif notify.eEvent == ce_calling.value:
-            # 正在外呼
-            pass
-        elif notify.eEvent == ce_accept.value:
-            # 连接成功
-            pass
+            if self._cbCallEventIncoming:
+                self._cbCallEventIncoming()
+        elif notify.eEvent == ce_proceeding.value:  # 正在处理
+            if self._cbCallEventProceeding:
+                self._cbCallEventProceeding()
+        elif notify.eEvent == ce_accept.value:      # 接听
+            if self._cbCallEventAccept:
+                self._cbCallEventAccept()
+        elif notify.eEvent == ce_decline.value:     # 拒绝
+            if self._cbCallEventDecline:
+                self._cbCallEventDecline()
+        elif notify.eEvent == ce_busy.value:        # 远端忙
+            if self._cbCallEventBusy:
+                self._cbCallEventBusy()
+        elif notify.eEvent == ce_unreachable.value: # 不可达
+            if self._cbCallEventUnreachable:
+                self._cbCallEventUnreachable()
+        elif notify.eEvent == ce_offline.value:     # 离线
+            if self._cbCallEventOffline:
+                self._cbCallEventOffline()
+        elif notify.eEvent == ce_hangup.value:      # 对方挂断
+            if self._cbCallEventHangup:
+                self._cbCallEventHangup()
+        elif notify.eEvent == ce_release.value:     # 释放
+            if self._cbCallEventRelease:
+                self._cbCallEventRelease()
+        elif notify.eEvent == ce_timeout.value:     # 超时无人接听
+            if self._cbCallEventTimeout:
+                self._cbCallEventTimeout()
+        elif notify.eEvent == ce_someerror.value:   # 某些错误
+            if self._cbCallEventSomeerror:
+                self._cbCallEventSomeerror()
         else:
-            # 未知事件 | 释放 | 拒接 | 远端忙 | 不可达 | 离线 | 远端挂断 | 释放 | 超时无人接听 | 某些错误
             pass
 
         if notify.eEvent == ce_calling.value or notify.eEvent == ce_incoming.value:
@@ -367,62 +409,73 @@ class imxAPI(object):
             for ch in notify.szUserID:
                 self._remoteId = self._remoteId + ch
 
+    # 设置呼叫事件回调函数 - 未知错误
+    def setCallEventUnknown(self, cb):
+        self._cbCallEventUnkown, cb = cb, self._cbCallEventUnkown
+        return cb
+
+    # 设置呼叫事件回调函数 - 正在外呼
+    def setCallEventCalling(self, cb):
+        self._cbCallEventCalling, cb = cb, self._cbCallEventCalling
+        return cb
+
+    # 设置呼叫事件回调函数 - 正在呼入
+    def setCallEventIncoming(self, cb):
+        self._cbCallEventIncoming, cb = cb, self._cbCallEventIncoming
+        return cb
+
+    # 设置呼叫事件回调函数 - 正在处理
+    def setCallEventProceeding(self, cb):
+        self._cbCallEventProceeding, cb = cb, self._cbCallEventProceeding
+        return cb
+
+    # 设置呼叫事件回调函数 - 接听
+    def setCallEventAccept(self, cb):
+        self._cbCallEventAccept, cb = cb, self._cbCallEventAccept
+        return cb
+
+    # 设置呼叫事件回调函数 - 拒绝
+    def setCallEventDecline(self, cb):
+        self._cbCallEventDecline, cb = cb, self._cbCallEventDecline
+        return cb
+
+    # 设置呼叫事件回调函数 - 远端忙
+    def setCallEventBusy(self, cb):
+        self._cbCallEventBusy, cb = cb, self._cbCallEventBusy
+        return cb
+
+    # 设置呼叫事件回调函数 - 不可达
+    def setCallEventUnreachable(self, cb):
+        self._cbCallEventUnreachable, cb = cb, self._cbCallEventUnreachable
+        return cb
+
+    # 设置呼叫事件回调函数 - 离线
+    def setCallEventOffline(self, cb):
+        self._cbCallEventOffline, cb = cb, self._cbCallEventOffline
+        return cb
+
+    # 设置呼叫事件回调函数 - 对方挂断
+    def setCallEventHangup(self, cb):
+        self._cbCallEventHangup, cb = cb, self._cbCallEventHangup
+        return cb
+
+    # 设置呼叫事件回调函数 - 释放
+    def setCallEventRelease(self, cb):
+        self._cbCallEventRelease, cb = cb, self._cbCallEventRelease
+        return cb
+
+    # 设置呼叫事件回调函数 - 超时无人接听
+    def setCallEventTimeout(self, cb):
+        self._cbCallEventTImeout, cb = cb, self._cbCallEventTimeout
+        return cb
+
+    # 设置呼叫事件回调函数 - 某些错误
+    def setCallEventSomeerror(self, cb):
+        self._cbCallEventSomeerror, cb = cb, self._cbCallEventSomeerror
+        return cb
+
 
 ################################################################################
 # 测试程序
 
-# 调试对外呼出
-def debugCallOut(server, port, personId, doctorId):
-    global gImxAPI
-    gImxAPI = imxAPI(server = server, port = port, personId = personId)
-    gImxAPI.version()
-    if gImxAPI.login():
-        while True:
-            try:
-                gImxAPI._callEvent.clear()
-                gImxAPI.call(doctorId)
-
-                gImxAPI._callEvent.wait(30)
-                if gImxAPI._callEvent.isSet():
-                    gImxAPI._callEvent.clear()
-                    if gImxAPI._callValue == ce_accept.value:
-                        raise Exception('accept')   # 对方应答
-                    elif gImxAPI._callValue == ce_calling.value:
-                        continue                    # 正在外呼
-                    elif gImxAPI._callValue == ce_decline.value:
-                        raise Exception('decline')  # 对方拒接
-                    elif gImxAPI._callValue == ce_timeout.value:
-                        raise Exception('timeout')  # 超时无人接听
-                    elif gImxAPI._callValue == ce_offline.value or gImxAPI._callValue == ce_unreachable.value:
-                        raise Exception('offline')  # 对方离线
-                gImxAPI.hangup()
-            except Exception, e:
-                if e.message == 'accept':
-                    # 对方接听
-                    logging.debug('imxAPI.debugCallOut: %s accept the call.' %gImxAPI._remoteId)
-                    gImxAPI._callEvent.clear()
-                    gImxAPI._callEvent.wait(30)
-                    if gImxAPI._callEvent.isSet() and gImxAPI._callValue == ce_release.value:
-                        # 对方挂断
-                        logging.debug('imxAPI.debugCallOut: %s hang up.' %gImxAPI._remoteId)
-                    gImxAPI.hangup()
-                elif e.message == 'decline':
-                    # 对方拒接
-                    logging.debug('imxAPI.debugCallOut: %s decline the call.' %gImxAPI._remoteId)
-                elif e.message == 'timeout':
-                    # 超时无人接听
-                    logging.debug('imxAPI.debugCallOut: %s timeout.' %gImxAPI._remoteId)
-                elif e.message == 'offline':
-                    # 对方不在线
-                    logging.debug('imxAPI.debugCallOut: %s not online.' %gImxAPI._remoteId)
-            finally:
-                time.sleep(30)
-
-# 测试程序
-if __name__ == '__main__':
-    server = '47.104.157.108'
-    port = 0
-    personId = 'joyee'
-    doctorId = 'jove'
-    debugCallOut(server = server, port = port, personId = personId, doctorId = doctorId)
-
+# TODO:

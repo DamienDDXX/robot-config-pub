@@ -5,6 +5,7 @@ import time
 import Queue
 import logging
 import threading
+import traceback
 from transitions import Machine, State
 
 if __name__ == '__main__':
@@ -42,14 +43,26 @@ class imxFSM(object):
         self._server = server
         self._port = port
         self._personId = personId
-        self._doctorId = None
+        self._doctor = None
+        self._doctorList = []
         self._orderList = [ ROLE_VD, ROLE_PHD, ROLE_NURSE, ROLE_GP, ROLE_SERVER ]
+        self._autoMode = False
 
         self._imxAPI = imxAPI(server = self._server, port = self._port, personId = self._personId)
-        self._autoAccept = False
-        self._callCancel = False
+        self._imxAPI.setCallEventUnknown(self.cbCallEventUnknown)
+        self._imxAPI.setCallEventCalling(self.cbCallEventCalling)
+        self._imxAPI.setCallEventIncoming(self.cbCallEventIncoming)
+        self._imxAPI.setCallEventProceeding(self.cbCallEventProceeding)
+        self._imxAPI.setCallEventAccept(self.cbCallEventAccept)
+        self._imxAPI.setCallEventDecline(self.cbCallEventDecline)
+        self._imxAPI.setCallEventBusy(self.cbCallEventBusy)
+        self._imxAPI.setCallEventUnreachable(self.cbCallEventUnreachable)
+        self._imxAPI.setCallEventOffline(self.cbCallEventOffline)
+        self._imxAPI.setCallEventHangup(self.cbCallEventHangup)
+        self._imxAPI.setCallEventRelease(self.cbCallEventRelease)
+        self._imxAPI.setCallEventTimeout(self.cbCallEventTimeout)
+        self._imxAPI.setCallEventSomeerror(self.cbCallEventSomeerror)
 
-        self._callThread = None
         self._loginThread = None
 
         self._states = [
@@ -68,13 +81,6 @@ class imxFSM(object):
                 'dest':     'stateOffline',
                 'before':   'actLogout'
             },
-            # 任意状态 -------> 空闲状态
-            {
-                'trigger':  'evtRelease',
-                'source':   '*',
-                'dest':     'stateIdle',
-                'before':   'actHangup'
-            },
             # 离线状态 ------->
             {
                 'trigger':  'evtLoginOk',
@@ -86,6 +92,7 @@ class imxFSM(object):
                 'trigger':  'evtBtnCall',
                 'source':   'stateIdle',
                 'dest':     'stateCall'
+                'before':   'actCallInit'
             },
             {
                 'trigger':  'evtIncomming',
@@ -104,11 +111,26 @@ class imxFSM(object):
                 'source':   'stateCall',
                 'dest':     'stateEstablished'
             },
+            {
+                'trigger':  'evtNoAnswer',
+                'source':   'stateCall',
+                'dest':     'stateIdle'
+            },
+            {
+                'trigger':  'evtRelease',
+                'source':   'stateCall',
+                'dest':     'stateCall'
+            },
             # 等待接听 ------->
             {
                 'trigger':  'evtBtnCall',
                 'source':   'stateWaitAccept',
                 'dest':     'stateIncoming'
+            },
+            {
+                'trigger':  'evtRelease',
+                'source':   'stateWaitAccept',
+                'dest':     'stateIdle'
             },
             # 正在呼入 ------->
             {
@@ -116,12 +138,22 @@ class imxFSM(object):
                 'source':   'stateIncoming',
                 'dest':     'stateEstablished'
             },
+            {
+                'trigger':  'evtRelease',
+                'source':   'stateIncoming',
+                'dest':     'stateIdle'
+            },
             # 建立状态 ------->
             {
                 'trigger':  'evtBtnCall',
                 'source':   'stateEstablished',
                 'dest':     'stateIdle',
                 'before':   'actHangup'
+            },
+            {
+                'trigger':  'evtRelease',
+                'source':   'stateEstablished',
+                'dest':     'stateIdle',
             }
         ]
 
@@ -191,44 +223,8 @@ class imxFSM(object):
         for order in self._orderList:
             for doctor in doctorList:
                 if doctor['onlineSts'] == 'idle' and str(order) in doctor['role'] and doctor not in sortList:
-                    sortList.append[doctor]
+                    sortList.append(doctor)
         return sortList
-
-    # 后台呼叫线程
-    #   依次根据在线医生的优先级进行呼叫
-    def callThread(self, doctorList, state, evtOk, evtFail):
-        logging.debug('imxFSM.callThread().')
-        try:
-            self._callCancel, doctorList = False, self.sortDoctorList(doctorList)
-            for doctor in doctorList:   # 遍历呼叫所有的医生
-                if not doctor['id']:
-                    continue
-                doctorId = doctor['id']
-                self._imxAPI.call(doctorId)
-                for wait in range(0, 2 * 30):
-                    if self._imxAPI.accepted():
-                        raise Exception('accepted') # 接听呼叫
-                    if self._callCancel:
-                        raise Exception('abort')    # 居民放弃呼叫
-                    if self._finiEvent.isSet():
-                        raise Exception('fini')     # 退出状态机
-                    time.sleep(0.5)
-                self._imxAPI.hangup()
-                time.sleep(1)
-            raise Exception('no answer')
-        except Exception as e:
-            if e == 'accepted':
-                logging.debug('call success: doctorId - %s.' %doctorId)
-                if (state == None or self.state == state) and evtOk:
-                    self.putEvent(evtOk)
-            else:
-                self._imxAPI.hangup()
-                logging.debug('call failed: reason - %s.' %e)
-                if (state == None or self.state == state) and evtFail:
-                    self.putEvent(evtFail)
-        finally:
-            self._callThread = None
-            logging.debug('imxFSM.callThread() fini.')
 
     # 登录动作
     def actLogin(self):
@@ -250,30 +246,46 @@ class imxFSM(object):
         logging.debug('imxFSM.exitIdle().')
         if gMp3FSM:
             gMp3FSM.putEvent(gMp3FSM.evtImxOn)
+            while gMp3FSM.state != 'stateImx':
+                time.sleep(0.5)
 
     # 登出
     def actLogout(self):
         logging.debug('imxFSM.actLogout().')
         self._imxAPI.logout()
 
-    # 呼叫
-    def actCall(self):
+    # 呼叫初始化
+    def actCallInit(self):
         global gServerAPI
-        logging.debug('imxFSM.actCall().')
+        logging.debug('imxFSM.actCallInit().')
+        self._doctor = None
+        del self._doctorList[:]
         ret, doctorList = gServerAPI.getDoctorList(self._personId)
         if ret:
-            if not self._callThread:
-                # 启动后台呼叫
-                self._callThread = threading.Thread(target = self.callThread, args = [doctorList, self.evtAccept, self.evtRelease, ])
-                self._callThread.start()
-        else:
-            # 获取医生列表失败
-            self.putEvent(self.evtRelease)
+            self._doctorList = self.sortDoctorList(doctorList)
+
+    # 呼叫
+    def actCall(self):
+        logging.debug('imxFSM.actCall().')
+        # 依次呼叫下一位医生
+        try:
+            if not self._doctor:
+                self._doctor = self._doctorList[0]
+            else:
+                i = self._doctorList.index(self._doctor) + 1
+                self._doctor = self._doctorList[i] if i < len(self._doctorList) else None
+        except:
+            self._doctor = None
+        finally:
+            if self._doctor:
+                self._imxAPI.call(str(self._doctor['id']))
+            else:
+                self.putEvent(self.evtNoAnswer)
 
     # 等待接听
     def actWaitCall(self):
         logging.debug('imxFSM.actWaitCall().')
-        if self._autoAccept:
+        if self._autoMode:
             self.putEvent(self.evtBtnCall)  # 自动接入
 
     # 接听
@@ -284,7 +296,6 @@ class imxFSM(object):
     # 挂断
     def actHangup(self):
         logging.debug('imxFSM.actHangup().')
-        self._callCancel = True
         self._imxAPI.hangup()
 
     # 拒接
@@ -300,9 +311,72 @@ class imxFSM(object):
     # 接入模式按键回调函数
     def cbButtonMute(self):
         logging.debug('imxFSM.cbButtonMute().')
-        self._autoAccept = not self._autoAccept
+        self._autoMode = not self._autoMode
         # TODO:
         #   通知屏幕更改显示状态
+
+    # 呼叫事件回调函数 - 未知错误
+    def cbCallEventUnknown(self):
+        logging.debug('imxFSM.cbCallEventUnknown().')
+        self.putEvent(self.evtRelease)
+
+    # 呼叫事件回调函数 - 正在外呼
+    def cbCallEventCalling(self):
+        logging.debug('imxFSM.cbCallEventCalling().')
+
+    # 呼叫事件回调函数 - 正在呼入
+    def cbCallEventIncoming(self):
+        logging.debug('imxFSM.cbCallEventIncoming().')
+        self.putEvent(self.evtIncomming)
+
+    # 呼叫事件回调函数 - 正在处理
+    def cbCallEventProceeding(self):
+        logging.debug('imxFSM.().cbCallEventProceeding')
+
+    # 呼叫事件回调函数 - 接听
+    def cbCallEventAccept(self):
+        logging.debug('imxFSM.().cbCallEventAccept')
+        self.putEvent(self.evtAccept)
+
+    # 呼叫事件回调函数 - 拒接
+    def cbCallEventDecline(self):
+        logging.debug('imxFSM.().cbCallEventDecline')
+        self.putEvent(self.evtRelease)
+
+    # 呼叫事件回调函数 - 远端忙
+    def cbCallEventBusy(self):
+        logging.debug('imxFSM.().cbCallEventBusy')
+        self.putEvent(self.evtRelease)
+
+    # 呼叫事件回调函数 - 不可达
+    def cbCallEventUnreachable(self):
+        logging.debug('imxFSM.().cbCallEventUnreachable')
+        self.putEvent(self.evtRelease)
+
+    # 呼叫事件回调函数 - 离线
+    def cbCallEventOffline(self):
+        logging.debug('imxFSM.().cbCallEventOffline')
+        self.putEvent(self.evtRelease)
+
+    # 呼叫事件回调函数 - 对方挂断
+    def cbCallEventHangup(self):
+        logging.debug('imxFSM.().cbCallEventHangup')
+        self.putEvent(self.evtRelease)
+
+    # 呼叫事件回调函数 - 释放
+    def cbCallEventRelease(self):
+        logging.debug('imxFSM.().cbCallEventRelease')
+        self.putEvent(self.evtRelease)
+
+    # 呼叫事件回调函数 - 超时无人接听
+    def cbCallEventTimeout(self):
+        logging.debug('imxFSM.().cbCallEventTimeout')
+        self.putEvent(self.evtRelease)
+
+    # 呼叫事件回调函数 - 某些错误
+    def cbCallEventSomeerror(self):
+        logging.debug('imxFSM.().cbCallEventSomeerror')
+        self.putEvent(self.evtRelease)
 
     # 视频状态机后台线程
     def fsmThread(self):
@@ -315,6 +389,7 @@ class imxFSM(object):
             gButtonAPI.setMuteCallback(self.cbButtonMute)
 
             self._finiEvent.clear()
+            self.to_stateOffline()
             while True:
                 self._finiEvent.wait(0.5)
                 if self._finiEvent.isSet():
