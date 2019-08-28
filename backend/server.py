@@ -8,6 +8,9 @@ import platform
 import datetime
 from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 
+import data_access
+from manager.serverFSM import serverFSM
+
 basedir = os.path.dirname(os.path.abspath(__file__))
 print(basedir)
 app = Flask(__name__,static_url_path='', static_folder=os.path.join(basedir, 'static'), template_folder=os.path.join(basedir, 'static'))
@@ -396,6 +399,17 @@ def get_keypad_strings():
 
 
 if __name__ == '__main__':
+    # 获取服务器设置信息
+    _, server_info = data_access.server.get_server_info()
+    hostName = server_info['address']
+    portNumber = server_info['port']
+
+    # 获取设备地址
+    _, device_info = data_access.device.get_device_info()
+    robotId = device_info['seriesNumber']
+    robotId = 'b827eb319c88'
+
+    sf = serverFSM(hostName = hostName, portNumber = portNumber, robotId = robotId)
     if platform.system().lower() == 'windows':
         app.run(port = 9999)
     elif platform.system().lower() == 'linux':

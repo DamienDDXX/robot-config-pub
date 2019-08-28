@@ -14,7 +14,6 @@ if __name__ == '__main__':
 from utility import setLogging
 
 from manager.mp3FSM import mp3FSM
-
 from manager.serverAPI import serverAPI
 from manager.buttonAPI import buttonAPI
 
