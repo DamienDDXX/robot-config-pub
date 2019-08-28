@@ -4,6 +4,7 @@
 import time
 import Queue
 import logging
+import platform
 import threading
 from transitions import Machine, State
 
@@ -22,8 +23,12 @@ __all__ = [
         'gServerFSM',
         ]
 
-# HEARTBEAT_INV = 10 * 60
-HEARTBEAT_INV   = 60
+if platform.system().lower() == 'windows':
+    HEARTBEAT_INV =  2 * 60
+elif platform.system().lower() == 'linux':
+    HEARTBEAT_INV = 10 * 60
+else:
+    raise NotImplementedError
 
 # 全局变量
 gServerFSM = None
@@ -192,7 +197,7 @@ class serverFSM(object):
         logging.debug('serverFSM.configThread().')
         try:
             for retry in range(0, 6):
-                ret, vsvrIp, vsvrIp, personList = self._serverAPI.getConfig()
+                ret, vsvrIp, vsvrPort, personList = self._serverAPI.getConfig()
                 if ret:
                     raise Exception('config')
                 logging.debug('get config failed.')
@@ -227,11 +232,13 @@ class serverFSM(object):
                 ret, playVer, confVer = self._serverAPI.heatbeat(playVer = self._playVer if self._playUpdated else None,
                                                                  confVer = self._confVer if self._confUpdated else None)
                 if ret:
-                    self._playVer, self._playUpdated = playVer, False if playVer else self._playUpdated
-                    self._confVer, self._confUpdated = confVer, False if confVer else self._confUpdated
-                    if playVer:
+                    if playVer and playVer != self._playVer:
+                        self._playVer = playVer
+                        self._playUpdated = False
                         self._mp3FSM.update(self.playUpdated)   # 更新音频列表
-                    if confVer:
+                    if confVer and confVer != self._confVer:
+                        self._confVer = confVer
+                        self._confUpdated = False
                         self.putEvent(self.evtConfig)   # 重新更新配置
                     raise Exception('ok')
                 logging.debug('heartbeat failed.')
@@ -281,10 +288,12 @@ class serverFSM(object):
 ###############################################################################
 # 测试程序
 if __name__ == '__main__':
+    global gServerFSM
     try:
-        sf = serverFSM(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = 'b827eb319c88')
-        while (1):
+        gServerFSM = serverFSM(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = 'b827eb319c88')
+        while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        sf.fini()
+        if gServerFSM:
+            gServerFSM.fini()
         sys.exit(0)

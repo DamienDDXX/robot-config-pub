@@ -16,8 +16,8 @@ from transitions import Machine, State
 if __name__ == '__main__':
     import sys
     sys.path.append('..')
-    from manager.buttonAPI import buttonAPI
-    from manager.serverAPI import serverAPI
+    from manager.buttonAPI import buttonAPI, gButtonAPI
+    from manager.serverAPI import serverAPI, gServerAPI
 
 from utility import setLogging
 
@@ -47,8 +47,22 @@ gMp3FSM = None
 class mp3FSM(object):
     # 类初始化
     def __init__(self, hostName, portNumber, token, getMp3List, volume = 0.5, mp3Dir = MP3_DIR_):
-        global gMp3FSM
+        global gMp3FSM, gButtonAPI
         gMp3FSM = self
+
+        if platform.system().lower() == 'linux':
+            # 挂载虚拟盘
+            os.system('sudo mount -t tmpfs -o size=100m,mode=0777 tmpfs /ram')
+
+        # 初始化按键
+        if not gButtonAPI:
+            gButtonAPI = buttonAPI()
+        gButtonAPI.setPlayCallback(self.cbButtonPlay)
+        gButtonAPI.setIncVolumeCallback(self.cbButtonIncVolume)
+        gButtonAPI.setDecVolumeCallback(self.cbButtonDecVolume)
+        if platform.system().lower() == 'windows':
+            gButtonAPI.setRadioCallback(self.cbButtonRadio)
+            gButtonAPI.setImxCallback(self.cbButtonImx)
 
         self._hostName = hostName
         self._portNumber = portNumber
@@ -449,19 +463,14 @@ class mp3FSM(object):
 ###############################################################################
 # 测试程序
 if __name__ == '__main__':
-    import manager.serverAPI
+    global gServerAPI, gMp3FSM
     try:
         hostName, portNumber, robotId = 'https://ttyoa.com', '8098', 'b827eb319c88'
-        sa = serverAPI(hostName = hostName, portNumber = portNumber, robotId = robotId)
-        ret, token = sa.login()
+        if not gServerAPI:
+            gServerAPI = serverAPI(hostName = hostName, portNumber = portNumber, robotId = robotId)
+        ret, token = gServerAPI.login()
         if ret:
-            mf = mp3FSM(hostName = hostName, portNumber = portNumber, token = token, getMp3List = sa.getMp3List)
-            ba = buttonAPI()
-            ba.setPlayCallback(mf.cbButtonPlay)
-            ba.setIncVolumeCallback(mf.cbButtonIncVolume)
-            ba.setDecVolumeCallback(mf.cbButtonDecVolume)
-            ba.setRadioCallback(mf.cbButtonRadio)
-            ba.setImxCallback(mf.cbButtonImx)
+            gMp3FSM = mp3FSM(hostName = hostName, portNumber = portNumber, token = token, getMp3List = gServerAPI.getMp3List)
             while (1):
                 time.sleep(1)
     except KeyboardInterrupt:
