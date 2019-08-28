@@ -208,11 +208,11 @@ class mp3FSM(object):
                 self.updateFileLocal()
                 for mp3 in mp3List:
                     try:
-                        fileId = mp3['fileId'].encode('ascii')
+                        fileId = str(mp3['fileId'])
                         index = self.fileExisted(fileId)
                         if index:
                             # 音频文件已经存在
-                            self._fileList[index]['pri'] = mp3['pri'].encode('ascii')
+                            self._fileList[index]['pri'] = str(mp3['pri'])
                             newList.append(self._fileList[index])
                         else:
                             # 音频文件不存在，需要重新下载
@@ -234,12 +234,11 @@ class mp3FSM(object):
                                             if chunk:
                                                 mp3File.write(chunk)
                                     logging.debug('download mp3 file done: url - %s' %fileUrl)
-                            self._fileList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': mp3['pri'].encode('ascii') })
-                            newList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': mp3['pri'].encode('ascii') })
-
-                        # 下载完成单个音频文件，通知状态机
-                        self.putEvent(self.evtInitOk)
-                        if mp3['pri'].encode('ascii') == '1':
+                            self._fileList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': str(mp3['pri']) })
+                            newList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': str(mp3['pri']) })
+                        if self.state == 'stateInit':
+                            self.putEvent(self.evtInitOk)   # 下载完成单个音频文件，通知状态机
+                        if str(mp3['pri']) == '1':
                             self.putEvent(self.evtRadio)
                     except:
                         traceback.print_exc()
@@ -288,6 +287,10 @@ class mp3FSM(object):
     def playThread(self):
         logging.debug('mp3FSM.playThread().')
         try:
+            for i in self._fileList:
+                print(i)
+            for i in self._playList:
+                print(i)
             removeList = []
             self._stopEvent.clear()
             while len(self._playList) > 0:
@@ -321,7 +324,7 @@ class mp3FSM(object):
                 traceback.print_exc()
         finally:
             mixer.music.stop()
-            mixer.quit()
+            # mixer.quit()
             self._playThread = None
             logging.debug('mp3FSM.playThread() fini.')
 
