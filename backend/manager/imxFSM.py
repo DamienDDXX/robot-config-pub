@@ -30,14 +30,13 @@ ROLE_NURSE  = 2     # 护士
 ROLE_GP     = 1     # 全科医生 - General Practitioner
 ROLE_SERVER = 15    # 在线服务员
 
-# 局部变量
-
 
 # 视频状态机类
 class imxFSM(object):
     # 初始化
     def __init__(self, server, port, personId):
-        global gImxFSM, gButtonAPI
+        logging.debug('imxFSM.__init__(%s, %s, %s)' %(server, port, personId))
+        global gImxFSM
         gImxFSM = self
 
         self._server = server
@@ -46,6 +45,7 @@ class imxFSM(object):
         self._doctorId = None
         self._orderList = [ ROLE_VD, ROLE_PHD, ROLE_NURSE, ROLE_GP, ROLE_SERVER ]
 
+        self._imxAPI = imxAPI(server = self._server, port = self._port, personId = self._personId)
         self._autoAccept = False
         self._callCancel = False
 
@@ -312,9 +312,8 @@ class imxFSM(object):
             if not gButtonAPI:
                 gButtonAPI = buttonAPI()
             gButtonAPI.setCallCallback(self.cbButtonCall)
-            gButtonAPI.setCallCallback(self.cbButtonMute)
+            gButtonAPI.setMuteCallback(self.cbButtonMute)
 
-            self._imxAPI = imxAPI(server = self._server, port = self._port, personId = self._personId)
             self._finiEvent.clear()
             while True:
                 self._finiEvent.wait(0.5)

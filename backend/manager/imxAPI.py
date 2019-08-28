@@ -128,6 +128,7 @@ gImxAPI = None
 class imxAPI(object):
     # 初始化
     def __init__(self, server, port, personId):
+        logging.debug('imxAPI.__init__(%s, %d, %s)' %(server, port, personId))
         global gImxAPI
         gImxAPI = self
 

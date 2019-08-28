@@ -117,8 +117,8 @@ class serverAPI(object):
                         # 获取视频服务器配置
                         if 'videoServer' in js['data']:
                             vsvrIp = js['data']['videoServer']['vsvrIp']
-                            vsvrPort = js['data']['videoServer']['vsvrPort']
-                            logging.debug('get config: vsvrIp - %s, vsvrPort: %s' %(vsvrIp, vsvrPort))
+                            vsvrPort = int(js['data']['videoServer']['vsvrPort'])
+                            logging.debug('get config: vsvrIp - %s, vsvrPort: %d' %(vsvrIp, vsvrPort))
 
                         # 获取居民配置信息
                         if 'person' in js['data']:
@@ -271,25 +271,26 @@ class serverAPI(object):
 ################################################################################
 # 测试程序
 if __name__ == '__main__':
-    sa = serverAPI(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = 'b827eb319c88')
+    global gServerAPI
+    gServerAPI = serverAPI(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = 'b827eb319c88')
     # 测试登录
-    ret, _ = sa.login()
+    ret, _ = gServerAPI.login()
     if ret:
         # 测试获取配置
-        ret, vsvrIp, vsvrPort, personList = sa.getConfig()
+        ret, vsvrIp, vsvrPort, personList = gServerAPI.getConfig()
         if ret:
             print(vsvrIp, vsvrPort, personList)
             # 测试获取医生列表
-            ret, doctorList = sa.getDoctorList(personList[0]['personId'])
+            ret, doctorList = gServerAPI.getDoctorList(personList[0]['personId'])
             if ret:
                 print(doctorList)
 
         # 测试获取音频列表
-        ret, mp3List = sa.getMp3List()
+        ret, mp3List = gServerAPI.getMp3List()
         if ret:
             print(mp3List)
 
         # 测试心跳同步
-        ret, playUpdate, confUpdate = sa.heatbeat()
+        ret, playUpdate, confUpdate = gServerAPI.heatbeat()
         if ret:
             print(playUpdate, confUpdate)
