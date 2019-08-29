@@ -218,7 +218,7 @@ class serverFSM(object):
                 if platform.system().lower() == 'linux':
                     personId = personList[0]['personId']
                     if not self._imxFSM:
-                        self._imxFSM = imxFSM(server = vsvrIp, portNumber = vsvrPort, personId = personId)
+                        self._imxFSM = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId)
                         self._buttonAPI.setCallCallback(self._imxFSM.cbButtonCall)
                         self._buttonAPI.setMuteCallback(self._imxFSM.cbButtonMute)
                 # TODO:
