@@ -29,8 +29,8 @@ __all__ = [
 # 定义按键
 if platform.system().lower() == 'linux':
     BUTTON_POWER        = 23    # 电源
-    BUTTON_INC_VOLUME   = 25    # 音量增加
-    BUTTON_DEC_VOLUME   = 24    # 音量减少
+    BUTTON_INC_VOLUME   = 24    # 音量增加
+    BUTTON_DEC_VOLUME   = 25    # 音量减少
     BUTTON_MUTE         = 8     # 关闭自动接入
 
     BUTTON_PLAY         = 7     # 播放

@@ -11,16 +11,14 @@ from transitions import Machine, State
 if __name__ == '__main__':
     import sys
     sys.path.append('..')
-    from manager.serverAPI import serverAPI, gServerAPI
+    from manager.serverAPI import serverAPI
 
-from manager.imxAPI import imxAPI, gImxAPI
-from manager.mp3FSM import mp3FSM, gMp3FSM
+from manager.imxAPI import imxAPI
 
 from utility import setLogging
 
 __all__ = [
         'imxFSM',
-        'gImxFSM',
         ]
 
 # 呼叫顺序：村医 -> 公共卫生医师 -> 护士 -> 全科医生 -> 在线服务员
@@ -36,9 +34,6 @@ class imxFSM(object):
     # 初始化
     def __init__(self, server, port, personId, getDoctorList):
         logging.debug('imxFSM.__init__(%s, %s, %s)' %(server, port, personId))
-        global gImxFSM
-        gImxFSM = self
-
         self._server = server
         self._port = port
         self._personId = personId
@@ -47,6 +42,9 @@ class imxFSM(object):
         self._doctorList = []
         self._orderList = [ ROLE_VD, ROLE_PHD, ROLE_NURSE, ROLE_GP, ROLE_SERVER ]
         self._autoMode = False
+
+        self._cbExitIdle = None
+        self._cbEntryIdle = None
 
         self._imxAPI = imxAPI(server = self._server, port = self._port, personId = self._personId)
         self._imxAPI.setCallEventUnknown(self.cbCallEventUnknown)
@@ -64,6 +62,7 @@ class imxFSM(object):
         self._imxAPI.setCallEventSomeerror(self.cbCallEventSomeerror)
 
         self._loginThread = None
+        self._loginStopEvent = threading.Thread()
 
         self._states = [
             State(name = 'stateOffline',    on_enter = 'actLogin',                          ignore_invalid_triggers = True),
@@ -160,18 +159,20 @@ class imxFSM(object):
         self._machine = Machine(self, states = self._states, transitions = self._transitions, ignore_invalid_triggers = True)
         self._eventQueue = Queue.Queue(5)
         self._eventList = []
-        self._finiEvent = threading.Event()
         self._fsmThread = threading.Thread(target = self.fsmThread)
         self._fsmThread.start()
 
     # 终止视频状态机
     def fini(self):
         logging.debug('imxFSM.fini().')
-        self._finiEvent.set()
-        while self._fsmThread:
-            time.sleep(0.5)
-        del self._eventList[:]
-        self._eventQueue = None
+        if self._loginThread:
+            self._loginStopEvent.set()
+            while self._loginThread:
+                time.sleep(0.5)
+        if self._fsmThread:
+            self.putEvent('fini')
+            while self._fsmThread:
+                time.sleep(0.5)
 
     # 向视频状态机事件队列发送事件
     def putEvent(self, event):
@@ -186,13 +187,12 @@ class imxFSM(object):
     # 从视频状态机事件队列提取事件
     def getEvent(self):
         if self._eventQueue:
-            if not self._eventQueue.empty():
-                logging.debug('imxFSM.getEvent().')
-                event = self._eventQueue.get()
-                self._eventQueue.task_done()
-                if event in self._eventList:
-                    self._eventList.remove(event)
-                return event
+            event = self._eventQueue.get(block = True)
+            self._eventQueue.task_done()
+            logging.debug('imxFSM.getEvent().')
+            if event in self._eventList:
+                self._eventList.remove(event)
+            return event
         return None
 
     # 后台登录线程
@@ -200,11 +200,12 @@ class imxFSM(object):
     def loginThread(self, event):
         logging.debug('imxFSM.loginThread().')
         try:
+            self._loginStopEvent.clear()
             while True:
                 if self._imxAPI.login():
                     raise Exception('login')
-                self._finiEvent.wait(30)
-                if self._finiEvent.isSet():
+                self._loginStopEvent.wait(30)
+                if self._loginStopEvent.isSet():
                     raise Exception('fini')
         except Exception, e:
             if e.message == 'login' and event:
@@ -233,21 +234,27 @@ class imxFSM(object):
             self._loginThread = threading.Thread(target = self.loginThread, args = [self.evtLoginOk, ])
             self._loginThread.start()
 
+    # 设置进入空闲状态动作回调函数
+    def setEntryIdleCallback(self, cb):
+        self._cbEntryIdle, cb = cb, self._cbEntryIdle
+        return cb
+
     # 进入空闲状态动作
     def entryIdle(self):
-        global gMp3FSM
         logging.debug('imxFSM.entryIdle().')
-        if gMp3FSM:
-            gMp3FSM.putEvent(gMp3FSM.evtImxOff)
+        if self._cbEntryIdle:
+            self._cbEntryIdle()
+
+    # 设置退出空闲状态动作回调函数
+    def setExitIdleCallback(self, cb):
+        self._cbExitIdle, cb = cb, self._cbExitIdle
+        return cb
 
     # 退出空闲状态动作
     def exitIdle(self):
-        global gMp3FSM
         logging.debug('imxFSM.exitIdle().')
-        if gMp3FSM:
-            gMp3FSM.putEvent(gMp3FSM.evtImxOn)
-            while gMp3FSM.state != 'stateImx':
-                time.sleep(0.5)
+        if self._cbExitIdle:
+            self._cbExitIdle()
 
     # 登出
     def actLogout(self):
@@ -256,7 +263,6 @@ class imxFSM(object):
 
     # 呼叫初始化
     def actCallInit(self):
-        global gServerAPI
         logging.debug('imxFSM.actCallInit().')
         self._doctor = None
         del self._doctorList[:]
@@ -382,17 +388,19 @@ class imxFSM(object):
     def fsmThread(self):
         logging.debug('imxFSM.fsmThread().')
         try:
-            self._finiEvent.clear()
             self.to_stateOffline()
             while True:
-                self._finiEvent.wait(0.5)
-                if self._finiEvent.isSet():
-                    raise Exception('fini')
                 event = self.getEvent()
                 if event:
-                    event()
-                    logging.debug('imxFSM: state - %s' %self.state)
+                    if event == 'fini'
+                        raise Exception('fini')
+                    else:
+                        event()
+                        logging.debug('imxFSM: state - %s' %self.state)
         finally:
+            self._eventQueue.clear()
+            self._eventQueue = None
+            del self._eventList[:]
             self._fsmThread = None
             self._imxAPI.logout()
             self._imxAPI.fini()
@@ -402,21 +410,20 @@ class imxFSM(object):
 ################################################################################
 # 测试程序
 if __name__ == '__main__':
-    global gServerAPI
     try:
         hostName, portNumber, robotId = 'https://ttyoa.com', '8098', 'b827eb319c88'
-        if not gServerAPI:
-            gServerAPI = serverAPI(hostName, portNumber, robotId)
-        ret, _ = gServerAPI.login()
+        server = serverAPI(hostName, portNumber, robotId)
+        ret, _ = server.login()
         if ret:
-            ret, vsvrIp, vsvrPort, personList = gServerAPI.getConfig()
-            print(vsvrIp, vsvrPort, personList)
+            ret, vsvrIp, vsvrPort, personList = server.getConfig()
             if ret and len(personList) > 0:
                 personId = personList[0]['personId']
-                gImxFSM = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId, getDoctorList = gServerAPI.getDoctorList)
+                imx = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId, getDoctorList = server.getDoctorList)
+                button = buttonAPI()
+                button.setCallCallback(imx.cbButtonCall)
+                button.setMuteCallback(imx.cbButtonMute)
                 while True:
                     time.sleep(1)
     except KeyboardInterrupt:
-        if gImxFSM:
-            gImxFSM.fini()
+        imx.fini()
         sys.exit(0)

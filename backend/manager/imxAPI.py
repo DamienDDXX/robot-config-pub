@@ -14,7 +14,6 @@ from utility import setLogging
 
 __all__ = [
         'imxAPI',
-        'gImxAPI',
         ]
 
 IMX_LIBRARY_PATH    = '/usr/lib/libimx.so'
@@ -121,17 +120,11 @@ net_state_callback_t    = CFUNCTYPE(None, imxStateStruct, c_void_p)
 login_callback_t        = CFUNCTYPE(None, loginNotifyStruct, c_void_p)
 call_event_callback_t   = CFUNCTYPE(None, callNotifyStruct, c_void_p)
 
-# 全局变量
-gImxAPI = None
-
 # 视频接口类
 class imxAPI(object):
     # 初始化
     def __init__(self, server, port, personId):
         logging.debug('imxAPI.__init__(%s, %d, %s)' %(server, port, personId))
-        global gImxAPI
-        gImxAPI = self
-
         self._server = server
         self._port = port
         self._personId = personId
@@ -481,11 +474,10 @@ class imxAPI(object):
 
 # 调试对外呼出
 def debugCallOut(server, port, personId, doctorId):
-    global gImxAPI
-    gImxAPI = imxAPI(server = server, port = port, personId = personId)
-    gImxAPI.version()
-    if gImxAPI.login():
-        gImxAPI.call(doctorId)
+    imx = imxAPI(server = server, port = port, personId = personId)
+    imx.version()
+    if imx.login():
+        imx.call(doctorId)
         while True:
             time.sleep(1)
 

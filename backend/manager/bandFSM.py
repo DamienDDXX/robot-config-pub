@@ -16,26 +16,20 @@ from manager.bandAPI import bandAPI
 
 __all__ = [
         'bandFSM',
-        'gBandFSM',
         ]
 
 # 宏定义
 MONITOR_INV = 30 * 60
 
-# 全局变量
-gBandFSM = None
-
 # 手环管理状态机类
 class bandFSM(object):
     # 初始化
     def __init__(self, inv = MONITOR_INV):
-        global gBandFSM
-        gBandFSM = self
-
         self._bandAPI = bandAPI()
         self._inv = inv
         _, self._mac = self._bandAPI.getBand()
         self._timerThread = None
+        self._timerStopEvent = threading.Event()
         self._scanThread = None
         self._monitorThread = None
         self._states = [
@@ -91,8 +85,6 @@ class bandFSM(object):
         self._machine = Machine(self, states = self._states, transitions = self._transitions, ignore_invalid_triggers = True)
         self._eventQueue = Queue.Queue(5)
         self._eventList = []
-        self._finiEvent = threading.Event()
-        self._finiEvent.clear()
         self._fsmThread = threading.Thread(target = self.fsmThread)
         self._fsmThread.start()
 
@@ -146,40 +138,40 @@ class bandFSM(object):
     # 从手环管理状态机事件队列中取事件
     def getEvent(self):
         if self._eventQueue:
-            if not self._eventQueue.empty():
-                logging.debug('bandFSM.getEvent().')
-                event = self._eventQueue.get()
-                self._eventQueue.task_done()
-                if event in self._eventList:
-                    self._eventList.remove(event)
-                return event
+            event = self._eventQueue.get(block = True)
+            self._eventQueue.task_done()
+            logging.debug('bandFSM.getEvent().')
+            if event in self._eventList:
+                self._eventList.remove(event)
+            return event
         return None
 
     # 手环服务器状态机后台线程
     def fsmThread(self):
         logging.debug('bandFSM.fsmThread().')
         try:
-            self._finiEvent.clear()
             self.to_stateIdle()
             while True:
-                self._finiEvent.wait(0.5)
-                if self._finiEvent.isSet():
-                    raise Exception('fini')
                 event = self.getEvent()
                 if event:
-                    event()
-                    logging.debug('bandFSM: state - %s', self.state)
-        except Exception:
-            pass
+                    if event == 'fini':
+                        raise Exception('fini')
+                    else:
+                        event()
+                        logging.debug('bandFSM: state - %s', self.state)
         finally:
+            self._eventQueue.clear()
+            self._eventQueue = None
+            del self._eventList[:]
             self._fsmThread = None
             logging.debug('bandFSM.fsmThread() fini.')
 
     # 定时器线程
     def timerThread(self, timeout, event):
         logging.debug('bandFSM.timerThread().')
-        self._finiEvent.wait(timeout)
-        if not self._finiEvent.isSet() and event:
+        self._timerStopEvent.clear()
+        self._timerStopEvent.wait(timeout)
+        if not self._timerStopEvent.isSet() and event:
             self.putEvent(event)
         logging.debug('bandFSM.timerThread() fini.')
 
@@ -204,22 +196,24 @@ class bandFSM(object):
     # 终止手环管理状态机
     def fini(self):
         logging.debug('bandFSM.fini().')
+        if self._timerThread:
+            self._timerStopEvent.set()
+            while self._timerThread:
+                time.sleep(0.5)
         if self._fsmThread:
-            self._finiEvent.set()
+            self.putEvent('fini')
             while self._fsmThread:
                 time.sleep(0.5)
-        del self._eventList[:]
-        self._eventQueue = None
 
 
 ################################################################################
 # 测试程序
 if __name__ == '__main__':
     try:
-        bf = bandFSM(inv = 3 * 60)
+        fsm = bandFSM(inv = 3 * 60)
         while (1):
             time.sleep(1)
     except KeyboardInterrupt:
-        bf.fini()
+        fsm.fini()
         sys.exit(0)
 

@@ -23,7 +23,6 @@ if platform.system().lower() == 'linux':
 
 __all__ = [
         'serverFSM',
-        'gServerFSM',
         ]
 
 if platform.system().lower() == 'windows':
@@ -33,16 +32,10 @@ elif platform.system().lower() == 'linux':
 else:
     raise NotImplementedError
 
-# 全局变量
-gServerFSM = None
-
 # 系统服务器状态机类定义
 class serverFSM(object):
     # 初始化
-    def __init__(self, hostName, portNumber, robotId, heartbeatInv = HEARTBEAT_INV)
-        global gServerFSM
-        gServerFSM = self
-
+    def __init__(self, hostName, portNumber, robotId, heartbeatInv = HEARTBEAT_INV):
         self._hostName = hostName
         self._portNumber = portNumber
         self._robotId = robotId
@@ -197,6 +190,18 @@ class serverFSM(object):
             self._loginThread = None
             logging.debug('serverFSM.loginThread() fini.')
 
+    # 进入视频通话模式
+    def entryImxMode(self):
+        logging.debug('serverFSM.entryImxMode().')
+        self._mp3FSM.actImxOn()
+        self._mp3FSM.putEvent(self._mp3FSM.evtImxOn)
+
+    # 退出视频通话模式
+    def exitImxMode(self):
+        logging.debug('serverFSM.exitImxMode().')
+        self._mp3FSM.actImxOff()
+        self._mp3FSM.putEvent(self._mp3FSM.evtImxOff)
+
     # 后台获取配置
     #   如果失败，间隔 30s 后重新获取
     #   尝试 6 次后重新登录
@@ -220,6 +225,8 @@ class serverFSM(object):
                     personId = personList[0]['personId']
                     if not self._imxFSM:
                         self._imxFSM = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId, getDoctorList = self._serverAPI.getDoctorList)
+                        self._imxFSM.setExitIdleCallback(self.entryImxMode)
+                        self._imxFSM.setEntryIdleCallback(self.exitImxMode)
                         self._buttonAPI.setCallCallback(self._imxFSM.cbButtonCall)
                         self._buttonAPI.setMuteCallback(self._imxFSM.cbButtonMute)
                 # TODO:
@@ -309,13 +316,10 @@ class serverFSM(object):
 ###############################################################################
 # 测试程序
 if __name__ == '__main__':
-    global gServerFSM
     try:
-        if not gServerFSM:
-            gServerFSM = serverFSM(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = 'b827eb319c88')
-            while True:
-                time.sleep(1)
+        fsm = serverFSM(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = 'b827eb319c88')
+        while True:
+            time.sleep(1)
     except KeyboardInterrupt:
-        if gServerFSM:
-            gServerFSM.fini()
+        fsm.fini()
         sys.exit(0)
