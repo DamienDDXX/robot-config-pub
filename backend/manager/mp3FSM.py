@@ -16,8 +16,9 @@ from transitions import Machine, State
 if __name__ == '__main__':
     import sys
     sys.path.append('..')
-    from manager.buttonAPI import buttonAPI, gButtonAPI
     from manager.serverAPI import serverAPI, gServerAPI
+
+from manager.buttonAPI import buttonAPI, gButtonAPI
 
 from utility import setLogging
 
@@ -287,10 +288,6 @@ class mp3FSM(object):
     def playThread(self):
         logging.debug('mp3FSM.playThread().')
         try:
-            for i in self._fileList:
-                print(i)
-            for i in self._playList:
-                print(i)
             removeList = []
             self._stopEvent.clear()
             while len(self._playList) > 0:
@@ -477,5 +474,5 @@ if __name__ == '__main__':
             while (1):
                 time.sleep(1)
     except KeyboardInterrupt:
-        mf.fini()
+        gMp3FSM.fini()
         sys.exit(0)

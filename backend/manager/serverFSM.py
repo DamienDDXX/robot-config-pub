@@ -17,6 +17,9 @@ from utility import setLogging
 from manager.mp3FSM import mp3FSM
 from manager.serverAPI import serverAPI
 from manager.buttonAPI import buttonAPI
+if platform.system().lower() == 'linux':
+    from manager.imxFSM import imxFSM
+    from manager.bandFSM import bandFSM
 
 __all__ = [
         'serverFSM',
@@ -208,6 +211,11 @@ class serverFSM(object):
             raise Exception('abort')
         except Exception, e:
             if e.message == 'config':
+                if platform.system().lower() == 'linux':
+                    personId = personList[0]['personId']
+                    if not self._imxFSM:
+                        self._imxFSM = imxFSM(server = vsvrIp, portNumber = vsvrPort, personId = personId)
+
                 # TODO:
                 #   配置视频服务器
                 #   配置蓝牙手环管理
@@ -278,6 +286,14 @@ class serverFSM(object):
     # 终止系统服务器状态机
     def fini(self):
         logging.debug('serverFSM.fini().')
+        if self._mp3FSM:
+            self._mp3FSM.fini()
+        if platform.system().lower() == 'linux':
+            if self._imxFSM:
+                self._imxFSM.fini()
+            if self._bandFSM:
+                self._bandFSM.finit()
+
         if self._fsmThread:
             self._finiEvent.set()
             while self._fsmThread or self._loginThread or self._configThread or self._heartbeatThread:
