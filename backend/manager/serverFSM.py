@@ -39,13 +39,14 @@ gServerFSM = None
 # 系统服务器状态机类定义
 class serverFSM(object):
     # 初始化
-    def __init__(self, hostName, portNumber, robotId, heartbeatInt = 10 * 60):
+    def __init__(self, hostName, portNumber, robotId, heartbeatInv = HEARTBEAT_INV)
         global gServerFSM
         gServerFSM = self
 
         self._hostName = hostName
         self._portNumber = portNumber
         self._robotId = robotId
+        self._heartbeatInv = heartbeatInv
         self._serverAPI = serverAPI(hostName = hostName, portNumber = portNumber, robotId = robotId)
 
         self._confVer = None
@@ -218,7 +219,7 @@ class serverFSM(object):
                 if platform.system().lower() == 'linux':
                     personId = personList[0]['personId']
                     if not self._imxFSM:
-                        self._imxFSM = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId)
+                        self._imxFSM = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId, getDoctorList = self._serverAPI.getDoctorList)
                         self._buttonAPI.setCallCallback(self._imxFSM.cbButtonCall)
                         self._buttonAPI.setMuteCallback(self._imxFSM.cbButtonMute)
                 # TODO:
@@ -237,7 +238,7 @@ class serverFSM(object):
     def heartbeatThread(self):
         logging.debug('serverFSM.heartbeatThread().')
         try:
-            self._finiEvent.wait(HEARTBEAT_INV)
+            self._finiEvent.wait(self._heartbeatInv)
             if self._finiEvent.isSet():
                 raise Exception('fini')
             for retry in range(0, 6):

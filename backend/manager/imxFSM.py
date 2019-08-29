@@ -11,8 +11,8 @@ from transitions import Machine, State
 if __name__ == '__main__':
     import sys
     sys.path.append('..')
+    from manager.serverAPI import serverAPI, gServerAPI
 
-from manager.serverAPI import serverAPI, gServerAPI
 from manager.imxAPI import imxAPI, gImxAPI
 from manager.mp3FSM import mp3FSM, gMp3FSM
 
@@ -34,7 +34,7 @@ ROLE_SERVER = 15    # 在线服务员
 # 视频状态机类
 class imxFSM(object):
     # 初始化
-    def __init__(self, server, port, personId):
+    def __init__(self, server, port, personId, getDoctorList):
         logging.debug('imxFSM.__init__(%s, %s, %s)' %(server, port, personId))
         global gImxFSM
         gImxFSM = self
@@ -42,6 +42,7 @@ class imxFSM(object):
         self._server = server
         self._port = port
         self._personId = personId
+        self._getDoctorList = getDoctorList
         self._doctor = None
         self._doctorList = []
         self._orderList = [ ROLE_VD, ROLE_PHD, ROLE_NURSE, ROLE_GP, ROLE_SERVER ]
@@ -259,7 +260,7 @@ class imxFSM(object):
         logging.debug('imxFSM.actCallInit().')
         self._doctor = None
         del self._doctorList[:]
-        ret, doctorList = gServerAPI.getDoctorList(self._personId)
+        ret, doctorList = self._getDoctorList(self._personId)
         if ret:
             self._doctorList = self.sortDoctorList(doctorList)
 
@@ -412,7 +413,7 @@ if __name__ == '__main__':
             print(vsvrIp, vsvrPort, personList)
             if ret and len(personList) > 0:
                 personId = personList[0]['personId']
-                gImxFSM = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId)
+                gImxFSM = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId, getDoctorList = gServerAPI.getDoctorList)
                 while True:
                     time.sleep(1)
     except KeyboardInterrupt:
