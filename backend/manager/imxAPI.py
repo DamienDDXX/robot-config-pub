@@ -466,7 +466,7 @@ class imxAPI(object):
 
     # 设置呼叫事件回调函数 - 超时无人接听
     def setCallEventTimeout(self, cb):
-        self._cbCallEventTImeout, cb = cb, self._cbCallEventTimeout
+        self._cbCallEventTimeout, cb = cb, self._cbCallEventTimeout
         return cb
 
     # 设置呼叫事件回调函数 - 某些错误
