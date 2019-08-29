@@ -18,8 +18,6 @@ if __name__ == '__main__':
     sys.path.append('..')
     from manager.serverAPI import serverAPI, gServerAPI
 
-from manager.buttonAPI import buttonAPI, gButtonAPI
-
 from utility import setLogging
 
 __all__ = [
@@ -54,16 +52,6 @@ class mp3FSM(object):
         if platform.system().lower() == 'linux':
             # 挂载虚拟盘
             os.system('sudo mount -t tmpfs -o size=100m,mode=0777 tmpfs /ram')
-
-        # 初始化按键
-        if not gButtonAPI:
-            gButtonAPI = buttonAPI()
-        gButtonAPI.setPlayCallback(self.cbButtonPlay)
-        gButtonAPI.setIncVolumeCallback(self.cbButtonIncVolume)
-        gButtonAPI.setDecVolumeCallback(self.cbButtonDecVolume)
-        if platform.system().lower() == 'windows':
-            gButtonAPI.setRadioCallback(self.cbButtonRadio)
-            gButtonAPI.setImxCallback(self.cbButtonImx)
 
         self._hostName = hostName
         self._portNumber = portNumber
@@ -470,9 +458,10 @@ if __name__ == '__main__':
             gServerAPI = serverAPI(hostName = hostName, portNumber = portNumber, robotId = robotId)
         ret, token = gServerAPI.login()
         if ret:
-            gMp3FSM = mp3FSM(hostName = hostName, portNumber = portNumber, token = token, getMp3List = gServerAPI.getMp3List)
-            while (1):
-                time.sleep(1)
+            if not gMp3FSM:
+                gMp3FSM = mp3FSM(hostName = hostName, portNumber = portNumber, token = token, getMp3List = gServerAPI.getMp3List)
+                while (1):
+                    time.sleep(1)
     except KeyboardInterrupt:
         gMp3FSM.fini()
         sys.exit(0)

@@ -23,7 +23,7 @@ __all__ = [
 MONITOR_INV = 30 * 60
 
 # 全局变量
-gBandFSM = NOne
+gBandFSM = None
 
 # 手环管理状态机类
 class bandFSM(object):

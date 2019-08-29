@@ -188,6 +188,9 @@ class serverFSM(object):
                     self._buttonAPI.setPlayCallback(self._mp3FSM.cbButtonPlay)
                     self._buttonAPI.setIncVolumeCallback(self._mp3FSM.cbButtonIncVolume)
                     self._buttonAPI.setDecVolumeCallback(self._mp3FSM.cbButtonDecVolume)
+                    if platform.system().lower() == 'windows':
+                        self._buttonAPI.setRadioCallback(self._mp3FSM.cbButtonRadio)
+                        self._buttonAPI.setImxCallback(self._mp3FSM.cbButtonImx)
                 self.putEvent(self.evtLoginOk)
         finally:
             self._loginThread = None
@@ -211,13 +214,14 @@ class serverFSM(object):
             raise Exception('abort')
         except Exception, e:
             if e.message == 'config':
+                # 配置视频服务器
                 if platform.system().lower() == 'linux':
                     personId = personList[0]['personId']
                     if not self._imxFSM:
                         self._imxFSM = imxFSM(server = vsvrIp, portNumber = vsvrPort, personId = personId)
-
+                        self._buttonAPI.setCallCallback(self._imxFSM.cbButtonCall)
+                        self._buttonAPI.setMuteCallback(self._imxFSM.cbButtonMute)
                 # TODO:
-                #   配置视频服务器
                 #   配置蓝牙手环管理
                 self._confUpdated = True     # 配置更新成功
                 self.putEvent(self.evtConfigOk)
@@ -306,9 +310,10 @@ class serverFSM(object):
 if __name__ == '__main__':
     global gServerFSM
     try:
-        gServerFSM = serverFSM(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = 'b827eb319c88')
-        while True:
-            time.sleep(1)
+        if not gServerFSM:
+            gServerFSM = serverFSM(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = 'b827eb319c88')
+            while True:
+                time.sleep(1)
     except KeyboardInterrupt:
         if gServerFSM:
             gServerFSM.fini()

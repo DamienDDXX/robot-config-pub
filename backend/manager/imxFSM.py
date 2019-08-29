@@ -12,7 +12,6 @@ if __name__ == '__main__':
     import sys
     sys.path.append('..')
 
-from manager.buttonAPI import buttonAPI, gButtonAPI
 from manager.serverAPI import serverAPI, gServerAPI
 from manager.imxAPI import imxAPI, gImxAPI
 from manager.mp3FSM import mp3FSM, gMp3FSM
@@ -380,14 +379,8 @@ class imxFSM(object):
 
     # 视频状态机后台线程
     def fsmThread(self):
-        global gButtonAPI
         logging.debug('imxFSM.fsmThread().')
         try:
-            if not gButtonAPI:
-                gButtonAPI = buttonAPI()
-            gButtonAPI.setCallCallback(self.cbButtonCall)
-            gButtonAPI.setMuteCallback(self.cbButtonMute)
-
             self._finiEvent.clear()
             self.to_stateOffline()
             while True:
