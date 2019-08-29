@@ -18,3 +18,9 @@ def restart_server():
         os.system('sudo reboot')
         sys.exit(0)
     return True, 'restarted'
+
+
+def shutdown_server():
+    # TODO:
+    #   关闭后台服务器
+    return True, 'shut down successfully'

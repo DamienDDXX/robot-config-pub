@@ -4,7 +4,8 @@
     <main class="main">
       <div class="row device-info">
         <span class="sn">设备序列号： {{seriesNumber}}</span>
-        <el-button type="danger" class="restart" icon="el-icon-refresh-left" @click="onRestartBtnClick" :loading="isUpdatinig">系统重启</el-button>
+        <el-button type="danger" class="restart" icon="el-icon-refresh-left" @click="onRestartBtnClick" :loading="isRestarting">系统重启</el-button>
+        <el-button type="danger" class="shutdown" @click="onShutdownBtnClick" :loading="isShutingDown">关闭系统</el-button>
       </div>
       <div class="row sections">
         <div class="section" v-for="(section, index) in sections" :key="index">
@@ -28,7 +29,8 @@ import deviceQuery from '@/rest/deviceQuery';
 export default {
   data() {
     return {
-      isUpdatinig: false,
+      isRestarting: false,
+      isShutingDown: false,
       seriesNumber: '',
       sections: [
         {
@@ -67,17 +69,34 @@ export default {
   methods: {
     async onRestartBtnClick() {
       try {
-        this.isUpdatinig = true;
+        this.isRestarting = true;
         await deviceQuery.restartServer();
-        this.isUpdatinig = false;
+        this.isRestarting = false;
         this.$message({
           message: '重启成功',
           type: 'success'
         });
       } catch {
-        this.isUpdatinig = false;
+        this.isRestarting = false;
         this.$message({
           message: '重启失败',
+          type: 'error'
+        });
+      }
+    },
+    async onShutdownBtnClick() {
+      try {
+        this.isShutingDown = true;
+        await deviceQuery.shutdownServer();
+        this.isShutingDown = false;
+        this.$message({
+          message: '关闭系统成功',
+          type: 'success'
+        });
+      } catch {
+        this.isShutingDown = false;
+        this.$message({
+          message: '关闭系统失败',
           type: 'error'
         });
       }
@@ -125,7 +144,7 @@ export default {
         margin-right:24px;
         margin-bottom: 16px;
       }
-      .restart {
+      .restart, .shutdown {
         margin-bottom: 16px;
       }
     }

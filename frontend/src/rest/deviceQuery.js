@@ -8,4 +8,8 @@ export default class DeviceQuery {
   static restartServer() {
     return axios.post('/api/restart').then(res => res.data);
   }
+
+  static shutdownServer() {
+    return axios.post('/api/shutdown').then(res => res.data);
+  }
 }

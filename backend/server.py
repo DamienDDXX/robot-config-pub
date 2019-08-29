@@ -68,6 +68,16 @@ def restart_server():
         return result, 400
 
 
+@app.route('/api/shutdown', methods=['post'])
+@jwt_required
+def shutdown_server():
+    status, result = device.shutdown_server()
+    if status:
+        return result, 200
+    else:
+        return result, 400
+
+
 @app.route('/api/server')
 @jwt_required
 def get_server_info():
