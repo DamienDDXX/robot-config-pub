@@ -204,6 +204,7 @@ class imxAPI(object):
         self._loginEvent.clear()
         if self._cdll.ImxLogin(c_char_p(self._personId)) == 0:
             self._loginEvent.wait(30)
+            print(self._login)
             if self._loginEvent.isSet() and self._login:
                 ret = True
         logging.debug('imxAPI.login(%s) %s.' %(self._personId, 'success' if ret else 'failed'))
@@ -478,4 +479,19 @@ class imxAPI(object):
 ################################################################################
 # 测试程序
 
-# TODO:
+# 调试对外呼出
+def debugCallOut(server, port, personId, doctorId):
+    global gImxAPI
+    gImxAPI = imxAPI(server = server, port = port, personId = personId)
+    gImxAPI.version()
+    if gImxAPI.login():
+        gImxAPI.call(doctorId)
+        while True:
+            time.sleep(1)
+
+if __name__ == '__main__':
+    server = '47.104.157.108'
+    port = 0
+    personId = 'joyee'
+    doctorId = '99778390000002c0'
+    debugCallOut(server = server, port = port, personId = personId, doctorId = doctorId)
