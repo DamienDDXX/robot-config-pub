@@ -91,7 +91,7 @@ class imxFSM(object):
             {
                 'trigger':  'evtBtnCall',
                 'source':   'stateIdle',
-                'dest':     'stateCall'
+                'dest':     'stateCall',
                 'before':   'actCallInit'
             },
             {

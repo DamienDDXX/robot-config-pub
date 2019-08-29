@@ -50,7 +50,7 @@ else:
     raise NotImplementedError
 
 # 全局变量
-gButtonAPI  = None
+gButtonAPI = None
 
 # 按键接口类
 class buttonAPI(object):
