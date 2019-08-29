@@ -162,6 +162,7 @@ class imxAPI(object):
         self._cbCallEvent = call_event_callback_t(self.cbCallEvent)
         self._cbNetState = net_state_callback_t(self.cbNetState)
         self._cdll = cdll.LoadLibrary(IMX_LIBRARY_PATH)
+        self._cdll.ImxSetLog(c_bool(False))
         self._cdll.ImxInit(c_char_p(self._server),
                            c_ushort(self._port),
                            c_ushort(0),
@@ -174,7 +175,6 @@ class imxAPI(object):
                            self._cbLogin,
                            self._cbCallEvent,
                            self._cbNetState)
-        self.setLog(False)
 
     # 终止视频模块
     def fini(self):
