@@ -174,7 +174,7 @@ class serverAPI(object):
         ret, doctorList = False, []
         try:
             doctorListUrl = self._hostName + ':' + self._portNumber + DOCTOR_LIST_URL_POSTFIX
-            logging.debug('get doctor list: url - %s, token - %s' %(doctorListUrl, self._token))
+            logging.debug('get doctor list: url - %s, token - %s, personId - %s' %(doctorListUrl, self._token, personId))
             headers = {
                     'Content-Type': 'application/json;charset=UTF-8',
                     'access_token': self._token

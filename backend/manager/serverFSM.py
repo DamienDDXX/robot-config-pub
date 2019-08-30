@@ -26,9 +26,11 @@ __all__ = [
         ]
 
 if platform.system().lower() == 'windows':
-    HEARTBEAT_INV =  2 * 60
+    HEARTBEAT_INV = 2 * 60
+    CALL_SOUND_FILEPATH = os.path.join(base_dir, '..\static\mp3\\dudu.mp3')
 elif platform.system().lower() == 'linux':
     HEARTBEAT_INV = 10 * 60
+    CALL_SOUND_FILEPATH = os.path.join(base_dir, '../static/mp3/dudo.mp3')
 else:
     raise NotImplementedError
 
@@ -188,17 +190,25 @@ class serverFSM(object):
             self._loginThread = None
             logging.debug('serverFSM.loginThread() fini.')
 
-    # 进入视频通话模式
-    def entryImxMode(self):
-        logging.debug('serverFSM.entryImxMode().')
+    # 进入视频通话模式回调函数
+    def cbEntryImxMode(self):
+        logging.debug('serverFSM.cbEntryImxMode().')
         self._mp3FSM.actImxOn()
         self._mp3FSM.putEvent(self._mp3FSM.evtImxOn)
 
-    # 退出视频通话模式
-    def exitImxMode(self):
-        logging.debug('serverFSM.exitImxMode().')
+    # 退出视频通话模式回调函数
+    def cbExitImxMode(self):
+        logging.debug('serverFSM.cbExitImxMode().')
         self._mp3FSM.actImxOff()
         self._mp3FSM.putEvent(self._mp3FSM.evtImxOff)
+
+    # 呼叫音效开关回调函数
+    def cbCallSound(self, onOff):
+        logging.debug('serverFSM.cbCallSound().')
+        if onOff:
+            self._mp3FSM.playSound(CALL_SOUND_FILEPATH)
+        else:
+            self._mp3FSM.stopSound()
 
     # 后台获取配置
     #   如果失败，间隔 30s 后重新获取
@@ -223,8 +233,9 @@ class serverFSM(object):
                     personId = personList[0]['personId']
                     if not self._imxFSM:
                         self._imxFSM = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId, getDoctorList = self._serverAPI.getDoctorList)
-                        self._imxFSM.setExitIdleCallback(self.entryImxMode)
-                        self._imxFSM.setEntryIdleCallback(self.exitImxMode)
+                        self._imxFSM.setExitIdleCallback(self.cbEntryImxMode)
+                        self._imxFSM.setEntryIdleCallback(self.cbExitImxMode)
+                        self._imxFSM.setCallSoundCallback(self.cbCallSound)
                         self._buttonAPI.setCallCallback(self._imxFSM.cbButtonCall)
                         self._buttonAPI.setMuteCallback(self._imxFSM.cbButtonMute)
                 # TODO:

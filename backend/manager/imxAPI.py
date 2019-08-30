@@ -375,7 +375,6 @@ class imxAPI(object):
             if self._cbCallEventProceeding:
                 self._cbCallEventProceeding()
         elif notify.eEvent == ce_accept.value:      # 接听
-            self.activeMedia()
             if self._cbCallEventAccept:
                 self._cbCallEventAccept()
         elif notify.eEvent == ce_decline.value:     # 拒绝
@@ -487,6 +486,7 @@ def debugCallOut(server, port, personId, doctorId):
     imx = imxAPI(server = server, port = port, personId = personId)
     imx.version()
     if imx.login():
+        imx.setCallEventAccept(imx.activeMedia)
         imx.call(doctorId)
         while True:
             time.sleep(1)

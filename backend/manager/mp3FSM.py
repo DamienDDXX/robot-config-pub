@@ -55,6 +55,7 @@ class mp3FSM(object):
         self._fileList = []
         self._volume = volume
         self._mp3Dir = MP3_DIR_
+        self._fileSound = None
 
         self._playThread = None
         self._playFiniEvent = threading.Event()
@@ -273,30 +274,47 @@ class mp3FSM(object):
         logging.debug('mp3FSM.playThread().')
         try:
             self._playFiniEvent.clear()
-            while len(self._playList) > 0:
-                filePath = self._playList[0]['filePath']
-                if os.path.isfile(filePath):
-                    logging.debug('play mp3 file: % start.' %filePath)
+            if self._fileSound:
+                # 播放音效
+                if os.path.isfile(self._fileSound):
+                    logging.debug('play mp3 file: % start.' %self._fileSound)
                     if not mixer.get_init():
                         mixer.init()
                     mixer.music.set_volume(self._volume * 0.5)
-                    mixer.music.load(filePath)
-                    mixer.music.play(start = self._playList[0]['pos'])
-                    if self._playList[0]['pri'] == '0':
-                        self.clearRadio()
+                    mixer.music.load(self._fileSound)
+                    mixer.music.play(loops = -1, start = 0.0)
                     while True:
                         self._playFiniEvent.wait(0.5)
                         if self._playFiniEvent.isSet():
-                            self._playList[0]['pos'] = float(mixer.music.get_pos()) / 1000
                             raise Exception('fini')
-                        else:
-                            if not mixer.music.get_busy():
-                                # 播放完毕，切换到下一首
-                                break
                         if self._volume != mixer.music.get_volume() * 2:
                             mixer.music.set_volume(self._volume * 0.5)
-                else:
-                    del self._playList[0]
+            else:
+                # 播放音频
+                while len(self._playList) > 0:
+                    filePath = self._playList[0]['filePath']
+                    if os.path.isfile(filePath):
+                        logging.debug('play mp3 file: % start.' %filePath)
+                        if not mixer.get_init():
+                            mixer.init()
+                        mixer.music.set_volume(self._volume * 0.5)
+                        mixer.music.load(filePath)
+                        mixer.music.play(start = self._playList[0]['pos'])
+                        if self._playList[0]['pri'] == '0':
+                            self.clearRadio()
+                        while True:
+                            self._playFiniEvent.wait(0.5)
+                            if self._playFiniEvent.isSet():
+                                self._playList[0]['pos'] = float(mixer.music.get_pos()) / 1000
+                                raise Exception('fini')
+                            else:
+                                if not mixer.music.get_busy():
+                                    # 播放完毕，切换到下一首
+                                    break
+                            if self._volume != mixer.music.get_volume() * 2:
+                                mixer.music.set_volume(self._volume * 0.5)
+                    else:
+                        del self._playList[0]
         except Exception, e:
             if e.message == 'fini':
                 pass
@@ -305,6 +323,7 @@ class mp3FSM(object):
         finally:
             mixer.music.stop()
             # mixer.quit()
+            self._fileSound = None
             self._playThread = None
             logging.debug('mp3FSM.playThread() fini.')
 
@@ -343,6 +362,26 @@ class mp3FSM(object):
         if not self._updateThread:
             self._updateThread = threading.Thread(target = self.updateThread, args = [cbDone, ])
             self._updateThread.start()
+
+    # 播放音效
+    def playSound(self, filePath):
+        logging.debug('mp3FSM.playSound().')
+        if self._playThread:
+            self._playFiniEvent.set()
+            while self._playThread:
+                time.sleep(0.1)
+        self._fileSound = filePath
+        self._playThread = threading.Thread(target = self.playThread)
+        self._playThread.start()
+
+    # 关闭音效
+    def stopSound(self):
+        logging.debug('mp3FSM.stopSound().')
+        if self._playThread:
+            self._playFiniEvent.set()
+            while self._playThread:
+                time.sleep(0.1)
+        self._fileSound = None
 
     # 播放按键回调函数
     def cbButtonPlay(self):

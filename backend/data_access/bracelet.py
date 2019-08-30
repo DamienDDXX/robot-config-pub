@@ -5,7 +5,7 @@ import platform
 from data_access import confmgr
 
 if platform.system().lower() == 'linux':
-    from manager.bandAPI import bandAPI, gBandAPI
+    from manager.bandAPI import bandAPI
 
 
 # 获取手环配置列表
@@ -106,11 +106,9 @@ def get_scanned_bracelet_list():
                 ]
         return True, scanned_bracelet_list
     elif platform.system().lower() == 'linux':
-        global gBandAPI
-        if not gBandAPI:
-            gBandAPI = bandAPI()
-            gBandAPI.init()
-        ret, scanList = gBandAPI.scan()
+        band = bandAPI()
+        band.init()
+        ret, scanList = band.scan()
         if ret:
             return True, scanList
         return True, []

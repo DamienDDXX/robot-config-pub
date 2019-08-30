@@ -45,6 +45,9 @@ onWriteResponseCallback_t   = CFUNCTYPE(None, c_ushort, c_ushort, c_ushort)
 onHvxCallback_t             = CFUNCTYPE(None, c_ushort, c_ushort, c_ubyte_p, c_ushort)
 onTxCompleteCallback_t      = CFUNCTYPE(None, c_ushort)
 
+# 局部变量
+_bandInited = False
+
 # 手环接口类
 class bandAPI(object):
     # 类初始化
@@ -76,29 +79,32 @@ class bandAPI(object):
 
     # 初始化手环
     def init(self):
+        global _bandInited
         logging.debug('bandAPI.init().')
         try:
             ret = True
-            if self._cdll.us_ble_init(BLE_SERIAL_NAME):
-                self._cbOnConnected = onConnectedCallback_t(self.onConnected)
-                self._cbOnDisconnected = onDisconnectedCallback_t(self.onDisconnected)
-                self._cbOnAdvReport = onAdvReportCallback_t(self.onAdvReport)
-                self._cbOnConnTimeout = onConnTimeoutCallback_t(self.onConnTimeout)
-                self._cbOnScanTimeout = onScanTimeoutCallback_t(self.onScanTimeout)
-                self._cbOnWriteResponse = onWriteResponseCallback_t(self.onWriteResponse)
-                self._cbOnHvx = onHvxCallback_t(self.onHvx)
-                self._cbOnTxComplete = onTxCompleteCallback_t(self.onTxComplete)
-                self._cdll.us_ble_set_callbacks(self._cbOnConnected,
-                                                self._cbOnAdvReport,
-                                                self._cbOnConnTimeout,
-                                                self._cbOnScanTimeout,
-                                                self._cbOnDisconnected,
-                                                self._cbOnWriteResponse,
-                                                self._cbOnHvx,
-                                                self._cbOnTxComplete)
-            else:
-                self.reportError()
-                raise Exception
+            if not _bandInited:
+                _bandInited = True
+                if self._cdll.us_ble_init(BLE_SERIAL_NAME):
+                    self._cbOnConnected = onConnectedCallback_t(self.onConnected)
+                    self._cbOnDisconnected = onDisconnectedCallback_t(self.onDisconnected)
+                    self._cbOnAdvReport = onAdvReportCallback_t(self.onAdvReport)
+                    self._cbOnConnTimeout = onConnTimeoutCallback_t(self.onConnTimeout)
+                    self._cbOnScanTimeout = onScanTimeoutCallback_t(self.onScanTimeout)
+                    self._cbOnWriteResponse = onWriteResponseCallback_t(self.onWriteResponse)
+                    self._cbOnHvx = onHvxCallback_t(self.onHvx)
+                    self._cbOnTxComplete = onTxCompleteCallback_t(self.onTxComplete)
+                    self._cdll.us_ble_set_callbacks(self._cbOnConnected,
+                                                    self._cbOnAdvReport,
+                                                    self._cbOnConnTimeout,
+                                                    self._cbOnScanTimeout,
+                                                    self._cbOnDisconnected,
+                                                    self._cbOnWriteResponse,
+                                                    self._cbOnHvx,
+                                                    self._cbOnTxComplete)
+                else:
+                    self.reportError()
+                    raise Exception
         except Exception:
             ret = False
             traceback.print_exc()
