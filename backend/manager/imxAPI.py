@@ -375,6 +375,7 @@ class imxAPI(object):
             if self._cbCallEventProceeding:
                 self._cbCallEventProceeding()
         elif notify.eEvent == ce_accept.value:      # 接听
+            self.activeMedia()
             if self._cbCallEventAccept:
                 self._cbCallEventAccept()
         elif notify.eEvent == ce_decline.value:     # 拒绝
@@ -494,5 +495,6 @@ if __name__ == '__main__':
     server = '47.104.157.108'
     port = 0
     personId = 'joyee'
+    doctorId = 'jove'
     doctorId = '99778390000002c0'
     debugCallOut(server = server, port = port, personId = personId, doctorId = doctorId)

@@ -3,6 +3,7 @@
 
 import platform
 from utility import robotId
+from manager import system
 
 if platform.system().lower() == 'linux':
     import os
@@ -21,6 +22,5 @@ def restart_server():
 
 
 def shutdown_server():
-    # TODO:
-    #   关闭后台服务器
+    system.fini()   # 关闭后台服务器
     return True, 'shut down successfully'

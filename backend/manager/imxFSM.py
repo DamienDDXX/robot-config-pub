@@ -256,7 +256,6 @@ class imxFSM(object):
     # 进入通话状态
     def entryEstablished(self):
         logging.debug('imxFSM.entryEstablished().')
-        self._imxAPI.activeMedia()
 
     # 登出
     def actLogout(self):

@@ -7,9 +7,7 @@ import os
 import platform
 import datetime
 from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, jwt_required, get_jwt_identity
-
-import data_access
-from manager.serverFSM import serverFSM
+from manager import system
 
 basedir = os.path.dirname(os.path.abspath(__file__))
 print(basedir)
@@ -19,10 +17,16 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(days=1)
 
 jwt = JWTManager(app)
 
+gServerFSM = None
+
 builtinUser = {
     'username': 'admin',
     'password': 'onlyforrobot'
 }
+
+__all__ = [
+        'manager_fini'
+        ]
 
 
 @app.route('/')
@@ -409,17 +413,11 @@ def get_keypad_strings():
 
 
 if __name__ == '__main__':
-    # 获取服务器设置信息
-    _, server_info = data_access.server.get_server_info()
-    hostName = server_info['address']
-    portNumber = server_info['port']
-
-    # 获取设备地址
-    _, device_info = data_access.device.get_device_info()
+    _, device_info = device.get_device_info()
     robotId = device_info['seriesNumber']
-    robotId = 'b827eb319c88'
-
-    sf = serverFSM(hostName = hostName, portNumber = portNumber, robotId = robotId)
+    if platform.system().lower() == 'windows':
+        robotId = 'b827eb319c88'
+    system.init(robotId)
     if platform.system().lower() == 'windows':
         app.run(port = 9999)
     elif platform.system().lower() == 'linux':
