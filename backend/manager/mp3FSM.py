@@ -126,6 +126,8 @@ class mp3FSM(object):
                         event()
                         logging.debug('mp3FSM: state - %s' %self.state)
         finally:
+            if self._playThread:
+                self._playFiniEvent.set()
             self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]
@@ -277,7 +279,7 @@ class mp3FSM(object):
                     logging.debug('play mp3 file: % start.' %filePath)
                     if not mixer.get_init():
                         mixer.init()
-                    mixer.music.set_volume(self._volume)
+                    mixer.music.set_volume(self._volume * 0.5)
                     mixer.music.load(filePath)
                     mixer.music.play(start = self._playList[0]['pos'])
                     if self._playList[0]['pri'] == '0':
@@ -291,8 +293,8 @@ class mp3FSM(object):
                             if not mixer.music.get_busy():
                                 # 播放完毕，切换到下一首
                                 break
-                        if self._volume != mixer.music.get_volume():
-                            mixer.music.set_volume(self._volume)
+                        if self._volume != mixer.music.get_volume() * 2:
+                            mixer.music.set_volume(self._volume * 0.5)
                 else:
                     del self._playList[0]
         except Exception, e:
@@ -390,7 +392,6 @@ class mp3FSM(object):
             self._playFiniEvent.set()
             while self._playThread:
                 time.sleep(0.1)
-
             if self._playList[0]['pri'] == '1':
                 # 正在播放广播
                 while len(self._playList) > 0 and self._playList[0]['pri'] == '1':
@@ -453,6 +454,7 @@ if __name__ == '__main__':
         if ret:
             mp3 = mp3FSM(hostName = hostName, portNumber = portNumber, token = token, getMp3List = server.getMp3List)
             button = buttonAPI()
+            button.setMuteCallback(mp3.cbButtonPlay)
             button.setPlayCallback(mp3.cbButtonPlay)
             button.setIncVolumeCallback(mp3.cbButtonIncVolume)
             button.setDecVolumeCallback(mp3.cbButtonDecVolume)

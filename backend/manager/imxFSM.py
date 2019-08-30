@@ -61,7 +61,7 @@ class imxFSM(object):
         self._imxAPI.setCallEventSomeerror(self.cbCallEventSomeerror)
 
         self._loginThread = None
-        self._loginStopEvent = threading.Thread()
+        self._loginStopEvent = threading.Event()
 
         self._states = [
             State(name = 'stateOffline',    on_enter = 'actLogin',                          ignore_invalid_triggers = True),
@@ -164,13 +164,9 @@ class imxFSM(object):
     # 终止视频状态机
     def fini(self):
         logging.debug('imxFSM.fini().')
-        if self._loginThread:
-            self._loginStopEvent.set()
-            while self._loginThread:
-                time.sleep(0.5)
         if self._fsmThread:
             self.putEvent('fini')
-            while self._fsmThread:
+            while self._fsmThread and self._loginThread:
                 time.sleep(0.5)
 
     # 向视频状态机事件队列发送事件
@@ -202,16 +198,18 @@ class imxFSM(object):
             self._loginStopEvent.clear()
             while True:
                 if self._imxAPI.login():
-                    raise Exception('login')
+                    # TODO:
+                    #   液晶显示图标
+                    #   音频播放通知
+                    if event:
+                        self.putEvent(event)
+                    break
                 self._loginStopEvent.wait(30)
                 if self._loginStopEvent.isSet():
+                    break
                     raise Exception('fini')
-        except Exception, e:
-            if e.message == 'login' and event:
-                # TODO:
-                #   液晶显示图标
-                #   音频播放通知
-                self.putEvent(event)
+        except:
+            traceback.print_exc()
         finally:
             self._loginThread = None
             logging.debug('imxFSM.loginThread() fini.')
@@ -279,7 +277,9 @@ class imxFSM(object):
         logging.debug('imxFSM.actCall().')
         # 依次呼叫下一位医生
         try:
-            if not self._doctor:
+            if len(self._doctorList) == 0:
+                self._doctor = None
+            elif not self._doctor:
                 self._doctor = self._doctorList[0]
             else:
                 i = self._doctorList.index(self._doctor) + 1
@@ -403,6 +403,8 @@ class imxFSM(object):
                         event()
                         logging.debug('imxFSM: state - %s' %self.state)
         finally:
+            if self._loginThread:
+                self._loginStopEvent.set()
             self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]

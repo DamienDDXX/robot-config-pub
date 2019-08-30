@@ -197,7 +197,6 @@ class imxAPI(object):
         self._loginEvent.clear()
         if self._cdll.ImxLogin(c_char_p(self._personId)) == 0:
             self._loginEvent.wait(30)
-            print(self._login)
             if self._loginEvent.isSet() and self._login:
                 ret = True
         logging.debug('imxAPI.login(%s) %s.' %(self._personId, 'success' if ret else 'failed'))
