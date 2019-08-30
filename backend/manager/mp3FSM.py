@@ -365,7 +365,7 @@ class mp3FSM(object):
 
     # 播放音效
     def playSound(self, filePath):
-        logging.debug('mp3FSM.playSound().')
+        logging.debug('mp3FSM.playSound(%s).' %filePath)
         if self._playThread:
             self._playFiniEvent.set()
             while self._playThread:

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 
+import os
 import time
 import Queue
 import logging
@@ -25,12 +26,13 @@ __all__ = [
         'serverFSM',
         ]
 
+base_dir = os.path.dirname(os.path.abspath(__file__))
 if platform.system().lower() == 'windows':
     HEARTBEAT_INV = 2 * 60
     CALL_SOUND_FILEPATH = os.path.join(base_dir, '..\static\mp3\\dudu.mp3')
 elif platform.system().lower() == 'linux':
     HEARTBEAT_INV = 10 * 60
-    CALL_SOUND_FILEPATH = os.path.join(base_dir, '../static/mp3/dudo.mp3')
+    CALL_SOUND_FILEPATH = os.path.join(base_dir, '../static/mp3/dudu.mp3')
 else:
     raise NotImplementedError
 
