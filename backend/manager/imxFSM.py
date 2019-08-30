@@ -70,7 +70,7 @@ class imxFSM(object):
             State(name = 'stateCall',       on_enter = 'actCall',                           ignore_invalid_triggers = True),
             State(name = 'stateWaitAccept', on_enter = 'actWaitCall',                       ignore_invalid_triggers = True),
             State(name = 'stateIncoming',   on_enter = 'actAccept',                         ignore_invalid_triggers = True),
-            State(name = 'stateEstablished',                                                ignore_invalid_triggers = True),
+            State(name = 'stateEstablished',on_enter = 'entryEstablished',                  ignore_invalid_triggers = True),
         ]
         self._transitions = [
             # 任意状态 -------> 离线状态
@@ -255,6 +255,11 @@ class imxFSM(object):
         logging.debug('imxFSM.exitIdle().')
         if self._cbExitIdle:
             self._cbExitIdle()
+
+    # 进入通话状态
+    def entryEstablished(self):
+        logging.debug('imxFSM.entryEstablished().')
+        self._imxAPI.activeMedia()
 
     # 登出
     def actLogout(self):

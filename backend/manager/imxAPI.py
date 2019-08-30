@@ -225,6 +225,16 @@ class imxAPI(object):
         logging.debug('imxAPI.call(%s) failed, error code: %d' %(destId, error))
         return False
 
+    # 启动媒体（音频采集、远端音视频播放）
+    def activeMedia(self)
+        logging.debug('imxAPI.activeMedia().')
+        error = self._cdll.ImxActiveMedia()
+        if error == 0:
+            logging.debug('imxAPI.activeMedia() success.')
+            return True
+        logging.debug('imxAPI.activeMedia() failed, error code: %d' %error)
+        return False
+
     # 接听视频呼叫
     def accept(self):
         logging.debug('imxAPI.accept(%s).' %self._callId)
