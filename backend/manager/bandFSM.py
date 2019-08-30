@@ -160,7 +160,7 @@ class bandFSM(object):
                         event()
                         logging.debug('bandFSM: state - %s', self.state)
         finally:
-            self._eventQueue.clear()
+            self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]
             self._fsmThread = None

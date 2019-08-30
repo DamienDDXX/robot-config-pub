@@ -6,16 +6,15 @@ import Queue
 import logging
 import threading
 import traceback
-from transitions import Machine, State
-
 if __name__ == '__main__':
     import sys
     sys.path.append('..')
     from manager.serverAPI import serverAPI
-
+    from manager.buttonAPI import buttonAPI
+from transitions import Machine, State
 from manager.imxAPI import imxAPI
-
 from utility import setLogging
+
 
 __all__ = [
         'imxFSM',
@@ -287,6 +286,7 @@ class imxFSM(object):
                 self._doctor = self._doctorList[i] if i < len(self._doctorList) else None
         except:
             self._doctor = None
+            traceback.print_exc()
         finally:
             if self._doctor:
                 self._imxAPI.call(str(self._doctor['id']))
@@ -397,13 +397,13 @@ class imxFSM(object):
             while True:
                 event = self.getEvent()
                 if event:
-                    if event == 'fini'
+                    if event == 'fini':
                         raise Exception('fini')
                     else:
                         event()
                         logging.debug('imxFSM: state - %s' %self.state)
         finally:
-            self._eventQueue.clear()
+            self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]
             self._fsmThread = None

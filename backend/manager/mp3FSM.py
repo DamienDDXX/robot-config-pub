@@ -56,8 +56,8 @@ class mp3FSM(object):
         self._volume = volume
         self._mp3Dir = MP3_DIR_
 
-        self._playStopEvent = threading.Event()
         self._playThread = None
+        self._playFiniEvent = threading.Event()
         self._updateThread = None
 
         self._states = [
@@ -126,7 +126,7 @@ class mp3FSM(object):
                         event()
                         logging.debug('mp3FSM: state - %s' %self.state)
         finally:
-            self._eventQueue.clear()
+            self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]
             self._fsmThread = None
@@ -270,7 +270,7 @@ class mp3FSM(object):
     def playThread(self):
         logging.debug('mp3FSM.playThread().')
         try:
-            self._playStopEvent.clear()
+            self._playFiniEvent.clear()
             while len(self._playList) > 0:
                 filePath = self._playList[0]['filePath']
                 if os.path.isfile(filePath):
@@ -283,10 +283,10 @@ class mp3FSM(object):
                     if self._playList[0]['pri'] == '0':
                         self.clearRadio()
                     while True:
-                        self._playStopEvent.wait(0.5)
-                        if self._playStopEvent.isSet():
+                        self._playFiniEvent.wait(0.5)
+                        if self._playFiniEvent.isSet():
                             self._playList[0]['pos'] = float(mixer.music.get_pos()) / 1000
-                            raise Exception('stop')
+                            raise Exception('fini')
                         else:
                             if not mixer.music.get_busy():
                                 # 播放完毕，切换到下一首
@@ -296,7 +296,7 @@ class mp3FSM(object):
                 else:
                     del self._playList[0]
         except Exception, e:
-            if e.message == 'stop':
+            if e.message == 'fini':
                 pass
             else:
                 traceback.print_exc()
@@ -309,13 +309,9 @@ class mp3FSM(object):
     # 终止音频状态机线程
     def fini(self):
         logging.debug('mp3FSM.fini().')
-        if self._playThread:
-            self._playStopEvent.set()
-            while self._playThread:
-                time.sleep(0.5)
         if self._fsmThread:
             self.putEvent('fini')
-            while self._fsmThread:
+            while self._fsmThread or self._playThread:
                 time.sleep(0.5)
 
     # 向音频状态机事件队列发送事件
@@ -391,9 +387,9 @@ class mp3FSM(object):
                 if i['pri'] == '0':
                     self._playList.append({ 'fileId': i['fileId'], 'filePath': i['filePath'], 'pri': '0', 'pos': 0.0 })
         else:
-            self._playStopEvent.set()
+            self._playFiniEvent.set()
             while self._playThread:
-                time.sleep(0.5)
+                time.sleep(0.1)
 
             if self._playList[0]['pri'] == '1':
                 # 正在播放广播
@@ -412,9 +408,9 @@ class mp3FSM(object):
     def actRadio(self):
         logging.debug('mp3FSM.actRadio().')
         if self._playThread:
-            self._playStopEvent.set()
+            self._playFiniEvent.set()
             while self._playThread:
-                time.sleep(0.5)
+                time.sleep(0.1)
 
         playList = []
         for i in self._fileList:
@@ -432,9 +428,9 @@ class mp3FSM(object):
     def actImxOn(self):
         logging.debug('mp3FSM.actImxOn().')
         if self._playThread:
-            self._playStopEvent.set()
+            self._playFiniEvent.set()
             while self._playThread:
-                time.sleep(0.5)
+                time.sleep(0.1)
             mixer.quit()
 
     # 处理视频结束

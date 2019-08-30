@@ -102,7 +102,6 @@ class serverFSM(object):
         self._eventQueue = Queue.Queue(5)
         self._machine = Machine(self, states = self._states, transitions = self._transitions, ignore_invalid_triggers = True)
         self._finiEvent = threading.Event()
-        self._finiEvent.clear()
         self._fsmThread = threading.Thread(target = self.fsmThread)
         self._fsmThread.start()
 
@@ -140,13 +139,12 @@ class serverFSM(object):
     # 从系统服务器状态机事件队列中取事件
     def getEvent(self):
         if self._eventQueue:
-            if not self._eventQueue.empty():
-                event = self._eventQueue.get()
-                logging.debug('serverFSM.getEvent().')
-                self._eventQueue.task_done()
-                if event in self._eventList:
-                    self._eventList.remove(event)
-                return event
+            event = self._eventQueue.get(block = True)
+            self._eventQueue.task_done()
+            logging.debug('serverFSM.getEvent().')
+            if event in self._eventList:
+                self._eventList.remove(event)
+            return event
         return None
 
     # 设置音频更新完成
@@ -215,7 +213,7 @@ class serverFSM(object):
                 logging.debug('get config failed.')
                 logging.debug('retry to get config in 30s.')
                 self._finiEvent.wait(30)
-                if _finiEvent.isSet():
+                if self._finiEvent.isSet():
                     raise Exception('fini')
             raise Exception('abort')
         except Exception, e:
@@ -284,14 +282,18 @@ class serverFSM(object):
             self._finiEvent.clear()
             self.to_stateLogin()    # 切换到登录状态
             while True:
-                self._finiEvent.wait(0.5)
-                if self._finiEvent.isSet():
-                    raise Exception('fini')
                 event = self.getEvent()
                 if event:
-                    event()
-                    logging.debug('serverFSM: state - %s', self.state)
+                    if event == 'fini':
+                        raise Exception('fini')
+                    else:
+                        event()
+                        logging.debug('serverFSM: state - %s', self.state)
         finally:
+            self._finiEvent.set()
+            self._eventQueue.queue.clear()
+            self._eventQueue = None
+            del self._eventList[:]
             self._fsmThread = None
             logging.debug('serverFSM.fsmThread() fini.')
 
@@ -307,7 +309,7 @@ class serverFSM(object):
                 self._bandFSM.finit()
 
         if self._fsmThread:
-            self._finiEvent.set()
+            self.putEvent('fini')
             while self._fsmThread or self._loginThread or self._configThread or self._heartbeatThread:
                 time.sleep(0.5)
         self._fsmThread = None

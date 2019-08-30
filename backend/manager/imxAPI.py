@@ -226,7 +226,7 @@ class imxAPI(object):
         return False
 
     # 启动媒体（音频采集、远端音视频播放）
-    def activeMedia(self)
+    def activeMedia(self):
         logging.debug('imxAPI.activeMedia().')
         error = self._cdll.ImxActiveMedia()
         if error == 0:
