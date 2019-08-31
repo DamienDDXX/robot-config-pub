@@ -174,6 +174,7 @@ class bandFSM(object):
         self._timerStopEvent.wait(timeout)
         if not self._timerStopEvent.isSet() and event:
             self.putEvent(desc, event)
+        self._timerThread = None
         logging.debug('bandFSM.timerThread(%s) fini.' %desc)
 
     # 扫描手环线程

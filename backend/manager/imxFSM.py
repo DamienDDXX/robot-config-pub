@@ -61,10 +61,11 @@ class imxFSM(object):
         self._imxAPI.setCallEventTimeout(self.cbCallEventTimeout)
         self._imxAPI.setCallEventSomeerror(self.cbCallEventSomeerror)
 
-        self._loginThread = None
-        self._loginStopEvent = threading.Event()
+        self._timerThread = None
+        self._timerStopEvent = threading.Event()
 
         self._states = [
+            State(name = 'stateInit',       on_enter = 'actInit',                           ignore_invalid_triggers = True),
             State(name = 'stateOffline',    on_enter = 'actLogin',                          ignore_invalid_triggers = True),
             State(name = 'stateIdle',       on_enter = 'entryIdle', on_exit = 'exitIdle',   ignore_invalid_triggers = True),
             State(name = 'stateCall',       on_enter = 'actCall',                           ignore_invalid_triggers = True),
@@ -73,6 +74,17 @@ class imxFSM(object):
             State(name = 'stateEstablished',on_enter = 'entryEstablished',                  ignore_invalid_triggers = True),
         ]
         self._transitions = [
+            # 初始状态
+            {
+                'trigger':  'evtInit',
+                'source':   'stateInit',
+                'dest':     'stateInit',
+            },
+            {
+                'trigger':  'evtInitOk',
+                'source':   'stateInit',
+                'dest':     'stateOffline',
+            },
             # 任意状态 -------> 离线状态
             {
                 'trigger':  'evtOffline',
@@ -81,6 +93,11 @@ class imxFSM(object):
                 'before':   'actLogout'
             },
             # 离线状态 ------->
+            {
+                'trigger':  'evtLogin',
+                'source':   'stateOffline',
+                'dest':     'stateOffline'
+            },
             {
                 'trigger':  'evtLoginOk',
                 'source':   'stateOffline',
@@ -167,7 +184,7 @@ class imxFSM(object):
         logging.debug('imxFSM.fini().')
         if self._fsmThread:
             self.putEvent('fini', None)
-            while self._fsmThread and self._loginThread:
+            while self._fsmThread and self._timerThread:
                 time.sleep(0.5)
 
     # 向视频状态机事件队列发送事件
@@ -192,29 +209,31 @@ class imxFSM(object):
             return True, v[0], v[1]
         return False, None, None
 
-    # 后台登录线程
-    #   如果登录失败，30s 后再次登录
-    def loginThread(self, desc, event):
-        logging.debug('imxFSM.loginThread().')
-        try:
-            self._loginStopEvent.clear()
-            while True:
-                if self._imxAPI.login():
-                    # TODO:
-                    #   液晶显示图标
-                    #   音频播放通知
-                    if event:
-                        self.putEvent(desc, event)
-                    break
-                self._loginStopEvent.wait(30)
-                if self._loginStopEvent.isSet():
-                    break
-                    raise Exception('fini')
-        except:
-            traceback.print_exc()
-        finally:
-            self._loginThread = None
-            logging.debug('imxFSM.loginThread() fini.')
+    # 定时器线程
+    def timerThread(self, timeout, desc, event):
+        logging.debug('imxFSM.timerThread().')
+        self._timerStopEvent.clear()
+        self._timerStopEvent.wait(timeout)
+        if self._timerStopEvent.isSet() and event:
+            self.putEvent(desc, event)
+        self._timerThread = None
+        logging.debug('imxFSM.timerThread() fini.')
+
+    # 启动定时器
+    def timerInit(self, timeout, desc, event):
+        logging.debug('imxFSM.timerInit().')
+        if self._timerThread:
+            self.timerFini()
+        self._timerThread = threading.Thread(target = timerThread, args = [timeout, desc, event, ])
+        self._timerThread.start()
+
+    # 停止定时器
+    def timerFini(self):
+        logging.debug('imxFSM.timerFini().')
+        if self._timerThread:
+            self._timerStopEvent.set()
+            while self._timerThread:
+                time.sleep(0.1)
 
     # 对在线医生列表进行优先级排序
     def sortDoctorList(self, doctorList):
@@ -226,12 +245,24 @@ class imxFSM(object):
                     sortList.append(doctor)
         return sortList
 
+    # 初始化动作
+    def actInit(self):
+        logging.debug('imxFSM.actInit().')
+        if self._imxAPI.init():
+            self.putEvent('evtInitOk', self.evtInitOk)
+        else:
+            self.timerInit(timeout = 10, desc = 'evtInit', event = self.evtInit)
+
     # 登录动作
     def actLogin(self):
         logging.debug('imxFSM.actLogin().')
-        if not self._loginThread:
-            self._loginThread = threading.Thread(target = self.loginThread, args = ['evtLoginOk', self.evtLoginOk, ])
-            self._loginThread.start()
+        if self._imxAPI.login():
+            # TODO:
+            #   液晶显示图标
+            #   音频播放通知
+            self.putEvent('evtLoginOk', self.evtLoginOk)
+        else:
+            self.timerInit(timeout = 30, desc = 'evtLogin', event = self.evtLogin)
 
     # 设置呼叫音效回调函数
     def setCallSoundCallback(self, cb):
@@ -432,8 +463,7 @@ class imxFSM(object):
                         event()
                         logging.debug('imxFSM: state - %s' %self.state)
         finally:
-            if self._loginThread:
-                self._loginStopEvent.set()
+            self.timerFini()
             self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]
