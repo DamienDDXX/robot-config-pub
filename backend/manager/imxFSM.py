@@ -453,7 +453,7 @@ class imxFSM(object):
     def fsmThread(self):
         logging.debug('imxFSM.fsmThread().')
         try:
-            self.to_stateOffline()
+            self.to_stateInit()
             while True:
                 ret, desc, event = self.getEvent()
                 if ret:

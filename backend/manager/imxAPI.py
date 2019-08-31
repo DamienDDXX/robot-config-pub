@@ -156,7 +156,7 @@ class imxAPI(object):
         self._cbNetState = None
 
     # 初始化视频模块
-    def init()
+    def init(self):
         logging.debug('imxAPI.init().')
         self._cbSysEvent = sys_event_callback_t(self.cbSysEvent)
         self._cbLogin = login_callback_t(self.cbLogin)
@@ -164,8 +164,7 @@ class imxAPI(object):
         self._cbNetState = net_state_callback_t(self.cbNetState)
         self._cdll = cdll.LoadLibrary(IMX_LIBRARY_PATH)
         self._cdll.ImxSetLog(c_bool(False))
-        self._cdll.ImxInit.restype = c_int
-        res = self._cdll.ImxInit(c_char_p(self._server),
+        ret = self._cdll.ImxInit(c_char_p(self._server),
                                  c_ushort(self._port),
                                  c_ushort(0),
                                  c_char_p(self._personId),
@@ -177,7 +176,7 @@ class imxAPI(object):
                                  self._cbLogin,
                                  self._cbCallEvent,
                                  self._cbNetState)
-        return True if res.value == 0 else False
+        return True if ret == 0 else False
 
     # 终止视频模块
     def fini(self):
@@ -205,9 +204,7 @@ class imxAPI(object):
         logging.debug('imxAPI.login().')
         ret = False
         self._loginEvent.clear()
-        self._cdll.ImxLogin.restype = c_int
-        res = self._cdll.ImxLogin(c_char_p(self._personId))
-        if res.value == 0:
+        if self._cdll.ImxLogin(c_char_p(self._personId)) == 0:
             self._loginEvent.wait(30)
             if self._loginEvent.isSet() and self._login:
                 ret = True
@@ -219,9 +216,7 @@ class imxAPI(object):
         logging.debug('imxAPI.logout().')
         ret = False
         self._loginEvent.clear()
-        self._cdll.ImxLogout.restype = c_int
-        res = self._cdll.ImxLogout()
-        if res.value == 0:
+        if self._cdll.ImxLogout() == 0:
             self._loginEvent.wait(30)
             if self._loginEvent.isSet() and not self._login:
                 ret = True
@@ -231,34 +226,31 @@ class imxAPI(object):
     # 发起视频呼叫
     def call(self, destId):
         logging.debug('imxAPI.call(%s).' %destId)
-        self._cdll.ImxCall.restype = c_int
         error = self._cdll.ImxCall(c_char_p(destId))
-        if error.value == 0:
+        if error == 0:
             logging.debug('imxAPI.call(%s) success.' %destId)
             return True
-        logging.debug('imxAPI.call(%s) failed, error code: %d' %(destId, error.value))
+        logging.debug('imxAPI.call(%s) failed, error code: %d' %(destId, error))
         return False
 
     # 启动媒体（音频采集、远端音视频播放）
     def activeMedia(self):
         logging.debug('imxAPI.activeMedia().')
-        self._cdll.ImxActiveMedia.restype = c_int
         error = self._cdll.ImxActiveMedia()
-        if error.value == 0:
+        if error == 0:
             logging.debug('imxAPI.activeMedia() success.')
             return True
-        logging.debug('imxAPI.activeMedia() failed, error code: %d' %error.value)
+        logging.debug('imxAPI.activeMedia() failed, error code: %d' %error)
         return False
 
     # 接听视频呼叫
     def accept(self):
         logging.debug('imxAPI.accept(%s).' %self._callId)
-        self._cdll.ImxAccept.restype = c_int
         error = self._cdll.ImxAccept(c_char_p(self._callId))
-        if error.value == 0:
+        if error == 0:
             logging.debug('imxAPI.accept(%s) success.' %self._callId)
             return True
-        logging.debug('imxAPI.accept(%s) failed, error code: %d' %(self._callId, error.value))
+        logging.debug('imxAPI.accept(%s) failed, error code: %d' %(self._callId, error))
         return False
 
     # 判断是否接听视频
@@ -268,23 +260,21 @@ class imxAPI(object):
     # 拒接视频呼叫
     def decline(self):
         logging.debug('imxAPI.decline(%s).' %self._callId)
-        self._cdll.ImxDecline.restype = c_int
         error = self._cdll.ImxDecline(c_char_p(self._callId))
-        if error.value == 0:
+        if error == 0:
             logging.debug('imxAPI.decline(%s) success.' %self._callId)
             return True
-        logging.debug('imxAPI.decline(%s) failed, error code: %d' %(self._callId, error.value))
+        logging.debug('imxAPI.decline(%s) failed, error code: %d' %(self._callId, error))
         return False
 
     # 挂掉视频呼叫
     def hangup(self):
         logging.debug('imxAPI.hangup(%s).' %self._callId)
-        self._cdll.ImxHangup.restype = c_int
         error = self._cdll.ImxHangup(c_char_p(self._callId))
-        if error.value == 0:
+        if error == 0:
             logging.debug('imxAPI.hangup(%s) success.' %self._callId)
             return True
-        logging.debug('imxAPI.hangup(%s) failed, error code: %d' %(self._callId, error.value))
+        logging.debug('imxAPI.hangup(%s) failed, error code: %d' %(self._callId, error))
         return False
 
     # 解析系统事件类型
@@ -503,6 +493,7 @@ class imxAPI(object):
 # 调试对外呼出
 def debugCallOut(server, port, personId, doctorId):
     imx = imxAPI(server = server, port = port, personId = personId)
+    imx.init()
     imx.version()
     if imx.login():
         imx.setCallEventAccept(imx.activeMedia)
