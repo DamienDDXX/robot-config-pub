@@ -27,4 +27,6 @@ def shutdown_server():
 
 
 def mimic_debug():
+    system.fini()
+    system.init()
     return True, 'mimic debug successfully'

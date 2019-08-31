@@ -11,14 +11,12 @@ from manager.serverFSM import serverFSM
 
 _system = None
 
-def init(robotId = None):
+def init(robotId = 'b827eb319c88'):
     global _system
     if not _system:
         _, server_info = server.get_server_info()   # 获取服务器地址
         hostName = server_info['address']
         portNumber = server_info['port']
-        if not robotId:
-            robotId = 'b827eb319c88'
         _system = serverFSM(hostName = hostName, portNumber = portNumber, robotId = robotId)
 
 
