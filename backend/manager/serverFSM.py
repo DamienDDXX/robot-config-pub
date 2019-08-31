@@ -131,25 +131,26 @@ class serverFSM(object):
             self._heartbeatThread.start()
 
     # 向系统服务器状态机事件队列中放事件
-    def putEvent(self, event):
+    def putEvent(self, desc, event):
         if self._eventQueue:
-            if event not in self._eventList and not self._eventQueue.full():
-                logging.debug('serverFSM.putEvent().')
-            self._eventList.append(event)
-            self._eventQueue.put(event)
-            return True
+            v = [desc, event]
+            if v not in self._eventList and not self._eventQueue.full():
+                logging.debug('serverFSM.putEvent(%s).' %desc)
+                self._eventList.append(v)
+                self._eventQueue.put(v)
+                return True
         return False
 
     # 从系统服务器状态机事件队列中取事件
     def getEvent(self):
         if self._eventQueue:
-            event = self._eventQueue.get(block = True)
+            v = self._eventQueue.get(block = True)
             self._eventQueue.task_done()
-            logging.debug('serverFSM.getEvent().')
-            if event in self._eventList:
-                self._eventList.remove(event)
-            return event
-        return None
+            logging.debug('serverFSM.getEvent(%s).' %v[0])
+            if v in self._eventList:
+                self._eventList.remove(v)
+            return True, v[0], v[1]
+        return False, None, None
 
     # 设置音频更新完成
     def playUpdated(self):
@@ -187,7 +188,7 @@ class serverFSM(object):
                     if platform.system().lower() == 'windows':
                         self._buttonAPI.setRadioCallback(self._mp3FSM.cbButtonRadio)
                         self._buttonAPI.setImxCallback(self._mp3FSM.cbButtonImx)
-                self.putEvent(self.evtLoginOk)
+                self.putEvent('evtLoginOk', self.evtLoginOk)
         finally:
             self._loginThread = None
             logging.debug('serverFSM.loginThread() fini.')
@@ -196,13 +197,13 @@ class serverFSM(object):
     def cbEntryImxMode(self):
         logging.debug('serverFSM.cbEntryImxMode().')
         self._mp3FSM.actImxOn()
-        self._mp3FSM.putEvent(self._mp3FSM.evtImxOn)
+        self._mp3FSM.putEvent('evtImxOn', self._mp3FSM.evtImxOn)
 
     # 退出视频通话模式回调函数
     def cbExitImxMode(self):
         logging.debug('serverFSM.cbExitImxMode().')
         self._mp3FSM.actImxOff()
-        self._mp3FSM.putEvent(self._mp3FSM.evtImxOff)
+        self._mp3FSM.putEvent('evtImxOff', self._mp3FSM.evtImxOff)
 
     # 呼叫音效开关回调函数
     def cbCallSound(self, onOff):
@@ -243,9 +244,9 @@ class serverFSM(object):
                 # TODO:
                 #   配置蓝牙手环管理
                 self._confUpdated = True     # 配置更新成功
-                self.putEvent(self.evtConfigOk)
+                self.putEvent('evtConfigOk', self.evtConfigOk)
             elif e.message == 'abort':
-                self.putEvent(self.evtFailed)
+                self.putEvent('evtFailed', self.evtFailed)
         finally:
             self._configThread = None
             logging.debug('serverFSM.configThread() fini.')
@@ -270,7 +271,7 @@ class serverFSM(object):
                     if confVer and confVer != self._confVer:
                         self._confVer = confVer
                         self._confUpdated = False
-                        self.putEvent(self.evtConfig)   # 重新更新配置
+                        self.putEvent('evtConfig', self.evtConfig)   # 重新更新配置
                     raise Exception('ok')
                 logging.debug('heartbeat failed.')
                 logging.debug('retry to heatbeat in 30s.')
@@ -281,9 +282,9 @@ class serverFSM(object):
             raise Exception('fail')
         except Exception as e:
             if e.message == 'ok':
-                self.putEvent(self.evtHeartbeat)
+                self.putEvent('evtHeartbeat', self.evtHeartbeat)
             elif e.message == 'fail':
-                self.putEvent(self.evtFailed)
+                self.putEvent('evtFailed', self.evtFailed)
         finally:
             self._heartbeatThread = None
             logging.debug('serverFSM.heartbeatThread() fini.')
@@ -295,9 +296,9 @@ class serverFSM(object):
             self._finiEvent.clear()
             self.to_stateLogin()    # 切换到登录状态
             while True:
-                event = self.getEvent()
-                if event:
-                    if event == 'fini':
+                ret, desc, event = self.getEvent()
+                if ret:
+                    if desc == 'fini':
                         raise Exception('fini')
                     else:
                         event()
@@ -322,7 +323,7 @@ class serverFSM(object):
                 self._bandFSM.finit()
 
         if self._fsmThread:
-            self.putEvent('fini')
+            self.putEvent('fini', None)
             while self._fsmThread or self._loginThread or self._configThread or self._heartbeatThread:
                 time.sleep(0.5)
         self._fsmThread = None

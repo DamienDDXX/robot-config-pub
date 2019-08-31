@@ -60,6 +60,7 @@ class mp3FSM(object):
         self._playThread = None
         self._playFiniEvent = threading.Event()
         self._updateThread = None
+        self._updateFiniEvent = threading.Event()
 
         self._states = [
             State(name = 'stateInit',   on_enter = 'actUpdate',     ignore_invalid_triggers = True),
@@ -119,9 +120,9 @@ class mp3FSM(object):
         try:
             self.to_stateInit()
             while True:
-                event = self.getEvent()
-                if event:
-                    if event == 'fini':
+                ret, desc, event = self.getEvent()
+                if ret:
+                    if desc == 'fini':
                         raise Exception('fini')
                     else:
                         event()
@@ -129,6 +130,9 @@ class mp3FSM(object):
         finally:
             if self._playThread:
                 self._playFiniEvent.set()
+            if self._updateThread:
+                self._updateFiniEvent.set()
+
             self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]
@@ -186,6 +190,7 @@ class mp3FSM(object):
     def updateThread(self, cbUpdateDone):
         logging.debug('mp3FSM.updateThread().')
         try:
+            self._updateFiniEvent.clear()
             ret, mp3List = self._getMp3Lsit()
             if ret:
                 newList = []
@@ -217,17 +222,22 @@ class mp3FSM(object):
                                     with open(filePath, 'wb') as mp3File:
                                         for chunk in rsp.iter_content(chunk_size = 1024):
                                             if chunk:
+                                                if self._updateFiniEvent.isSet():
+                                                    raise Exception('fini')
                                                 mp3File.write(chunk)
                                     logging.debug('download mp3 file done: url - %s' %fileUrl)
                             self._fileList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': str(mp3['pri']) })
                             newList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': str(mp3['pri']) })
                         if self.state == 'stateInit':
-                            self.putEvent(self.evtInitOk)   # 下载完成单个音频文件，通知状态机
+                            self.putEvent('evtInitOk', self.evtInitOk)   # 下载完成单个音频文件，通知状态机
                         if str(mp3['pri']) == '1':
-                            self.putEvent(self.evtRadio)
+                            self.putEvent('evtRadio', self.evtRadio)
                         time.sleep(0.5)
-                    except:
-                        traceback.print_exc()
+                    except Exception, e:
+                        if e.message == 'fini':
+                            pass
+                        else:
+                            traceback.print_exc()
                     finally:
                         pass
 
@@ -322,8 +332,9 @@ class mp3FSM(object):
                 traceback.print_exc()
         finally:
             mixer.music.stop()
-            # mixer.quit()
-            self._fileSound = None
+            if self._fileSound:
+                mixer.quit()
+                self._fileSound = None
             self._playThread = None
             logging.debug('mp3FSM.playThread() fini.')
 
@@ -331,30 +342,31 @@ class mp3FSM(object):
     def fini(self):
         logging.debug('mp3FSM.fini().')
         if self._fsmThread:
-            self.putEvent('fini')
-            while self._fsmThread or self._playThread:
+            self.putEvent('fini', None)
+            while self._fsmThread or self._playThread or self._updateThread:
                 time.sleep(0.5)
 
     # 向音频状态机事件队列发送事件
-    def putEvent(self, event):
+    def putEvent(self, desc, event):
         if self._eventQueue:
-            if event not in self._eventList and not self._eventQueue.full():
-                logging.debug('mp3FSM.putEvent().')
-                self._eventList.append(event)
-                self._eventQueue.put(event)
+            v = [desc, event]
+            if v not in self._eventList and not self._eventQueue.full():
+                logging.debug('mp3FSM.putEvent(%s).' %desc)
+                self._eventList.append(v)
+                self._eventQueue.put(v)
                 return True
         return False
 
     # 从音频状态机事件队列提取事件
     def getEvent(self):
         if self._eventQueue:
-            event = self._eventQueue.get(block = True)
+            v = self._eventQueue.get(block = True)
             self._eventQueue.task_done()
-            logging.debug('mp3FSM.getEvent().')
-            if event in self._eventList:
-                self._eventList.remove(event)
-            return event
-        return None
+            logging.debug('mp3FSM.getEvent(%s).' %v[0])
+            if v in self._eventList:
+                self._eventList.remove(v)
+            return True, v[0], v[1]
+        return False, None, None
 
     # 更新音频文件
     def update(self, cbDone):
@@ -386,7 +398,7 @@ class mp3FSM(object):
     # 播放按键回调函数
     def cbButtonPlay(self):
         logging.debug('mp3FSM.cbButtonPlay().')
-        self.putEvent(self.evtButtonPlay)
+        self.putEvent('evtButtonPlay', self.evtButtonPlay)
 
     # 音量增加键回调函数
     def cbButtonIncVolume(self):
@@ -409,9 +421,9 @@ class mp3FSM(object):
     def cbButtonImx(self):
         logging.debug('mp3FSM.cbButtonImx().')
         if self.state == 'stateImx':
-            self.putEvent(self.evtImxOff)
+            self.putEvent('evtImxOff', self.evtImxOff)
         else:
-            self.putEvent(self.evtImxOn)
+            self.putEvent('evtImxOn', self.evtImxOn)
 
     # 更新音频列表
     def actUpdate(self):

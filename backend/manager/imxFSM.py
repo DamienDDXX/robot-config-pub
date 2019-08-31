@@ -166,34 +166,35 @@ class imxFSM(object):
     def fini(self):
         logging.debug('imxFSM.fini().')
         if self._fsmThread:
-            self.putEvent('fini')
+            self.putEvent('fini', None)
             while self._fsmThread and self._loginThread:
                 time.sleep(0.5)
 
     # 向视频状态机事件队列发送事件
-    def putEvent(self, event):
+    def putEvent(self, desc, event):
         if self._eventQueue:
-            if event not in self._eventList and not self._eventQueue.full():
-                logging.debug('imxFSM.putEvent().')
-                self._eventList.append(event)
-                self._eventQueue.put(event)
+            v = [desc, event]
+            if v not in self._eventList and not self._eventQueue.full():
+                logging.debug('imxFSM.putEvent(%s).' %desc)
+                self._eventList.append(v)
+                self._eventQueue.put(v)
                 return True
         return False
 
     # 从视频状态机事件队列提取事件
     def getEvent(self):
         if self._eventQueue:
-            event = self._eventQueue.get(block = True)
+            v = self._eventQueue.get(block = True)
             self._eventQueue.task_done()
-            logging.debug('imxFSM.getEvent().')
-            if event in self._eventList:
-                self._eventList.remove(event)
-            return event
-        return None
+            logging.debug('imxFSM.getEvent(%s).' %v[0])
+            if v in self._eventList:
+                self._eventList.remove(v)
+            return True, v[0], v[1]
+        return False, None, None
 
     # 后台登录线程
     #   如果登录失败，30s 后再次登录
-    def loginThread(self, event):
+    def loginThread(self, desc, event):
         logging.debug('imxFSM.loginThread().')
         try:
             self._loginStopEvent.clear()
@@ -203,7 +204,7 @@ class imxFSM(object):
                     #   液晶显示图标
                     #   音频播放通知
                     if event:
-                        self.putEvent(event)
+                        self.putEvent(desc, event)
                     break
                 self._loginStopEvent.wait(30)
                 if self._loginStopEvent.isSet():
@@ -229,7 +230,7 @@ class imxFSM(object):
     def actLogin(self):
         logging.debug('imxFSM.actLogin().')
         if not self._loginThread:
-            self._loginThread = threading.Thread(target = self.loginThread, args = [self.evtLoginOk, ])
+            self._loginThread = threading.Thread(target = self.loginThread, args = ['evtLoginOk', self.evtLoginOk, ])
             self._loginThread.start()
 
     # 设置呼叫音效回调函数
@@ -296,13 +297,13 @@ class imxFSM(object):
             if self._doctor:
                 self._imxAPI.call(str(self._doctor['id']))
             else:
-                self.putEvent(self.evtNoAnswer)
+                self.putEvent('evtNoAnswer', self.evtNoAnswer)
 
     # 等待接听
     def actWaitCall(self):
         logging.debug('imxFSM.actWaitCall().')
         if self._autoMode:
-            self.putEvent(self.evtBtnCall)  # 自动接入
+            self.putEvent('evtBtnCall', self.evtBtnCall)  # 自动接入
 
     # 接听
     def actAccept(self):
@@ -322,7 +323,7 @@ class imxFSM(object):
     # 呼叫按键回调函数
     def cbButtonCall(self):
         logging.debug('imxFSM.cbButtonCall().')
-        self.putEvent(self.evtBtnCall)
+        self.putEvent('evtBtnCall', self.evtBtnCall)
 
     # 接入模式按键回调函数
     def cbButtonMute(self):
@@ -334,7 +335,7 @@ class imxFSM(object):
     # 呼叫事件回调函数 - 未知错误
     def cbCallEventUnknown(self):
         logging.debug('imxFSM.cbCallEventUnknown().')
-        self.putEvent(self.evtRelease)
+        self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 正在外呼
     def cbCallEventCalling(self):
@@ -347,7 +348,7 @@ class imxFSM(object):
         logging.debug('imxFSM.cbCallEventIncoming().')
         if self._cbCallSound:
             self._cbCallSound(True)     # 启动 <嘟嘟> 音效
-        self.putEvent(self.evtIncomming)
+        self.putEvent('evtIncomming', self.evtIncomming)
 
     # 呼叫事件回调函数 - 正在处理
     def cbCallEventProceeding(self):
@@ -359,63 +360,63 @@ class imxFSM(object):
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
         self._imxAPI.activeMedia()
-        self.putEvent(self.evtAccept)
+        self.putEvent('evtAccept', self.evtAccept)
 
     # 呼叫事件回调函数 - 拒接
     def cbCallEventDecline(self):
         logging.debug('imxFSM.().cbCallEventDecline')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
-        self.putEvent(self.evtRelease)
+        self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 远端忙
     def cbCallEventBusy(self):
         logging.debug('imxFSM.().cbCallEventBusy')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
-        self.putEvent(self.evtRelease)
+        self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 不可达
     def cbCallEventUnreachable(self):
         logging.debug('imxFSM.().cbCallEventUnreachable')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
-        self.putEvent(self.evtRelease)
+        self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 离线
     def cbCallEventOffline(self):
         logging.debug('imxFSM.().cbCallEventOffline')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
-        self.putEvent(self.evtRelease)
+        self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 对方挂断
     def cbCallEventHangup(self):
         logging.debug('imxFSM.().cbCallEventHangup')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
-        self.putEvent(self.evtRelease)
+        self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 释放
     def cbCallEventRelease(self):
         logging.debug('imxFSM.().cbCallEventRelease')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
-        self.putEvent(self.evtRelease)
+        self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 超时无人接听
     def cbCallEventTimeout(self):
         logging.debug('imxFSM.().cbCallEventTimeout')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
-        self.putEvent(self.evtRelease)
+        self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 某些错误
     def cbCallEventSomeerror(self):
         logging.debug('imxFSM.().cbCallEventSomeerror')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
-        self.putEvent(self.evtRelease)
+        self.putEvent('evtRelease', self.evtRelease)
 
     # 视频状态机后台线程
     def fsmThread(self):
@@ -423,9 +424,9 @@ class imxFSM(object):
         try:
             self.to_stateOffline()
             while True:
-                event = self.getEvent()
-                if event:
-                    if event == 'fini':
+                ret, desc, event = self.getEvent()
+                if ret:
+                    if desc == 'fini':
                         raise Exception('fini')
                     else:
                         event()
