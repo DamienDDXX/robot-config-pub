@@ -2,8 +2,9 @@
 # -*- coding: utf8 -*-
 
 from data_access import confmgr
-from manager import wifiManager
+from manager.wifiAPI import wifiAPI
 
+_wifi = None
 
 # 获取无线网络配置信息
 def get_wifi_info():
@@ -31,5 +32,7 @@ def update_wifi_info(w_info):
 
 # 获取可用的无线网络列表
 def get_available_wifi_list():
-    wifiManager.wifiInit()
-    return True, wifiManager.wifiScan()
+    global _wifi
+    if not _wifi:
+        _wifi = wifiAPI()
+    return True, _wifi.scan()
