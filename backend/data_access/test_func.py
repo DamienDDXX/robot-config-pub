@@ -6,7 +6,7 @@ import random
 import platform
 
 from utility import audioRecord, camera
-from manager.buttonAPI import buttonAPI, gButtonAPI
+from manager.buttonAPI import buttonAPI
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -177,29 +177,29 @@ def button_dec_volume():
 
 
 def enter_keypad_test_env():
-    global gButtonAPI, _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
-    if not gButtonAPI:
-        gButtonAPI = buttonAPI()
+    global _buttonAPI, _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
+    if not _buttonAPI:
+        _buttonAPI = buttonAPI()
     _buttonArray       = []
-    _cbButtonPower     = gButtonAPI.setPowerCallback(button_power)
-    _cbButtonMute      = gButtonAPI.setMuteCallback(button_mute)
-    _cbButtonCall      = gButtonAPI.setCallCallback(button_call)
-    _cbButtonPlay      = gButtonAPI.setPlayCallback(button_play)
-    _cbButtonIncVolume = gButtonAPI.setIncVolumeCallback(button_inc_volume)
-    _cbButtonDecVolume = gButtonAPI.setDecVolumeCallback(button_dec_volume)
+    _cbButtonPower     = _buttonAPI.setPowerCallback(button_power)
+    _cbButtonMute      = _buttonAPI.setMuteCallback(button_mute)
+    _cbButtonCall      = _buttonAPI.setCallCallback(button_call)
+    _cbButtonPlay      = _buttonAPI.setPlayCallback(button_play)
+    _cbButtonIncVolume = _buttonAPI.setIncVolumeCallback(button_inc_volume)
+    _cbButtonDecVolume = _buttonAPI.setDecVolumeCallback(button_dec_volume)
     return True, 'OK'
 
 
 def exit_keypad_test_env():
-    global gButtonAPI, _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
-    if not gButtonAPI:
-        gButtonAPI = buttonAPI()
-    gButtonAPI.setPowerCallback(_cbButtonPower)
-    gButtonAPI.setMuteCallback(_cbButtonMute)
-    gButtonAPI.setCallCallback(_cbButtonCall)
-    gButtonAPI.setPlayCallback(_cbButtonPlay)
-    gButtonAPI.setIncVolumeCallback(_cbButtonIncVolume)
-    gButtonAPI.setDecVolumeCallback(_cbButtonDecVolume)
+    global _buttonAPI, _buttonArray, _cbButtonPower, _cbButtonMute, _cbButtonCall, _cbButtonPlay, _cbButtonIncVolume, _cbButtonDecVolume
+    if not _buttonAPI:
+        _buttonAPI = buttonAPI()
+    _buttonAPI.setPowerCallback(_cbButtonPower)
+    _buttonAPI.setMuteCallback(_cbButtonMute)
+    _buttonAPI.setCallCallback(_cbButtonCall)
+    _buttonAPI.setPlayCallback(_cbButtonPlay)
+    _buttonAPI.setIncVolumeCallback(_cbButtonIncVolume)
+    _buttonAPI.setDecVolumeCallback(_cbButtonDecVolume)
     return True, 'OK'
 
 

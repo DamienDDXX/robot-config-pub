@@ -34,5 +34,12 @@ if __name__ == '__main__':
             time.sleep(1)
     except KeyboardInterrupt:
         fini()
-        sys.exit(0)
+        time.sleep(10)
+        try:
+            init()
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            fini()
+            sys.exit(0)
 

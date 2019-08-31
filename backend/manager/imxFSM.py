@@ -383,11 +383,11 @@ class imxFSM(object):
 
     # 呼叫事件回调函数 - 正在处理
     def cbCallEventProceeding(self):
-        logging.debug('imxFSM.().cbCallEventProceeding')
+        logging.debug('imxFSM.cbCallEventProceeding().')
 
     # 呼叫事件回调函数 - 接听
     def cbCallEventAccept(self):
-        logging.debug('imxFSM.().cbCallEventAccept')
+        logging.debug('imxFSM.cbCallEventAccept().')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
         self._imxAPI.activeMedia()
@@ -395,56 +395,56 @@ class imxFSM(object):
 
     # 呼叫事件回调函数 - 拒接
     def cbCallEventDecline(self):
-        logging.debug('imxFSM.().cbCallEventDecline')
+        logging.debug('imxFSM.cbCallEventDecline().')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
         self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 远端忙
     def cbCallEventBusy(self):
-        logging.debug('imxFSM.().cbCallEventBusy')
+        logging.debug('imxFSM.cbCallEventBusy().')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
         self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 不可达
     def cbCallEventUnreachable(self):
-        logging.debug('imxFSM.().cbCallEventUnreachable')
+        logging.debug('imxFSM.cbCallEventUnreachable().')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
         self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 离线
     def cbCallEventOffline(self):
-        logging.debug('imxFSM.().cbCallEventOffline')
+        logging.debug('imxFSM.cbCallEventOffline().')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
         self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 对方挂断
     def cbCallEventHangup(self):
-        logging.debug('imxFSM.().cbCallEventHangup')
+        logging.debug('imxFSM.cbCallEventHangup().')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
         self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 释放
     def cbCallEventRelease(self):
-        logging.debug('imxFSM.().cbCallEventRelease')
+        logging.debug('imxFSM.cbCallEventRelease().')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
         self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 超时无人接听
     def cbCallEventTimeout(self):
-        logging.debug('imxFSM.().cbCallEventTimeout')
+        logging.debug('imxFSM.cbCallEventTimeout().')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
         self.putEvent('evtRelease', self.evtRelease)
 
     # 呼叫事件回调函数 - 某些错误
     def cbCallEventSomeerror(self):
-        logging.debug('imxFSM.().cbCallEventSomeerror')
+        logging.debug('imxFSM.cbCallEventSomeerror().')
         if self._cbCallSound:
             self._cbCallSound(False)     # 关闭 <嘟嘟> 音效
         self.putEvent('evtRelease', self.evtRelease)

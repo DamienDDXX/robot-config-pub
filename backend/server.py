@@ -10,7 +10,6 @@ from flask_jwt_extended import JWTManager, create_access_token, create_refresh_t
 from manager import system
 
 basedir = os.path.dirname(os.path.abspath(__file__))
-print(basedir)
 app = Flask(__name__,static_url_path='', static_folder=os.path.join(basedir, 'static'), template_folder=os.path.join(basedir, 'static'))
 app.config['JWT_SECRET_KEY'] = 'random_sect_key'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(days=1)
