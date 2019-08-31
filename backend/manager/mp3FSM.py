@@ -289,7 +289,7 @@ class mp3FSM(object):
                 if os.path.isfile(self._fileSound):
                     logging.debug('play mp3 file: % start.' %self._fileSound)
                     if not mixer.get_init():
-                        mixer.init()
+                        mixer.init(frequency = 48000)
                     mixer.music.set_volume(self._volume * 0.5)
                     mixer.music.load(self._fileSound)
                     mixer.music.play(loops = -1, start = 0.0)
@@ -306,7 +306,7 @@ class mp3FSM(object):
                     if os.path.isfile(filePath):
                         logging.debug('play mp3 file: % start.' %filePath)
                         if not mixer.get_init():
-                            mixer.init()
+                            mixer.init(frequency = 48000)
                         mixer.music.set_volume(self._volume * 0.5)
                         mixer.music.load(filePath)
                         mixer.music.play(start = self._playList[0]['pos'])
@@ -489,7 +489,7 @@ class mp3FSM(object):
     def actImxOff(self):
         logging.debug('mp3FSM.actImxOff().')
         if not mixer.get_init():
-            mixer.init()
+            mixer.init(frequency = 48000)
         if len(self._playList) > 0 and not self._playThread:
             self._playThread = threading.Thread(target = self.playThread)
             self._playThread.start()

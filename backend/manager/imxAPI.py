@@ -175,7 +175,8 @@ class imxAPI(object):
                                  self._cbSysEvent,
                                  self._cbLogin,
                                  self._cbCallEvent,
-                                 self._cbNetState)
+                                 self._cbNetState,
+                                 c_bool(True))
         return True if ret == 0 else False
 
     # 终止视频模块

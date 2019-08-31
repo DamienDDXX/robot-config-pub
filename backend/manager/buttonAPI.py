@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 
+import time
 import platform
 import logging
 
@@ -23,7 +24,6 @@ else:
 
 __all__ = [
             'buttonAPI',
-            'gButtonAPI',
             ]
 
 # 定义按键
@@ -50,42 +50,45 @@ else:
     raise NotImplementedError
 
 # 全局变量
-gButtonAPI = None
+_buttonInited = False
 
 # 按键接口类
 class buttonAPI(object):
     # 初始化
     def __init__(self):
-        global gButtonAPI
-        gButtonAPI = self
+        global _buttonInited
+        if not _buttonInited:
+            _buttonInited = True
 
-        self._cbButtonPlay      = None    # 播放按键回调函数指针
-        self._cbButtonMute      = None    # 自动接入按键回调函数指针
-        self._cbButtonCall      = None    # 呼叫按键回调函数指针
-        self._cbButtonPower     = None    # 电源按键回调函数指针
-        self._cbButtonIncVolume = None    # 音量增加按键回调函数指针
-        self._cbButtonDecVolume = None    # 音量减少按键回调函数指针
-        if platform.system().lower() == 'windows':
-            self._cbButtonImx   = None    # 视频模拟按键回调函数指针
-            self._cbButtonRadio = None    # 广播模拟按键回调函数指针
-            self._pressed       = False
+            self._buttonTime        = time.time()
 
-        if platform.system().lower() == 'linux':
-            # 初始化按键端口及回调函数
-            GPIO.setwarnings(False)
-            GPIO.setmode(GPIO.BCM)
-            buttonList = [ BUTTON_PLAY, BUTTON_MUTE, BUTTON_CALL, BUTTON_POWER, BUTTON_INC_VOLUME, BUTTON_DEC_VOLUME ]
-            for button in buttonList:
-                GPIO.setup(button, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-                GPIO.add_event_detect(button, GPIO.FALLING, callback = self.callback, bouncetime = 5)
-        elif platform.system().lower() == 'windows':
-            # 启动按键模拟线程
-            self._finiEvent = threading.Event()
-            self._finiEvent.clear()
-            self._thread = threading.Thread(target = self.simThread)
-            self._thread.start()
-        else:
-            raise NotImplementedError
+            self._cbButtonPlay      = None    # 播放按键回调函数指针
+            self._cbButtonMute      = None    # 自动接入按键回调函数指针
+            self._cbButtonCall      = None    # 呼叫按键回调函数指针
+            self._cbButtonPower     = None    # 电源按键回调函数指针
+            self._cbButtonIncVolume = None    # 音量增加按键回调函数指针
+            self._cbButtonDecVolume = None    # 音量减少按键回调函数指针
+            if platform.system().lower() == 'windows':
+                self._cbButtonImx   = None    # 视频模拟按键回调函数指针
+                self._cbButtonRadio = None    # 广播模拟按键回调函数指针
+                self._pressed       = False
+
+            if platform.system().lower() == 'linux':
+                # 初始化按键端口及回调函数
+                GPIO.setwarnings(False)
+                GPIO.setmode(GPIO.BCM)
+                buttonList = [ BUTTON_PLAY, BUTTON_MUTE, BUTTON_CALL, BUTTON_POWER, BUTTON_INC_VOLUME, BUTTON_DEC_VOLUME ]
+                for button in buttonList:
+                    GPIO.setup(button, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+                    GPIO.add_event_detect(button, GPIO.FALLING, callback = self.callback, bouncetime = 10)
+            elif platform.system().lower() == 'windows':
+                # 启动按键模拟线程
+                self._finiEvent = threading.Event()
+                self._finiEvent.clear()
+                self._thread = threading.Thread(target = self.simThread)
+                self._thread.start()
+            else:
+                raise NotImplementedError
 
     # 设置播放按键处理回调函数
     def setPlayCallback(self, cb):
@@ -120,6 +123,11 @@ class buttonAPI(object):
     if platform.system().lower() == 'linux':
         # 按键回调函数
         def callback(self, chan):
+            if time.time() - self._buttonTime < 0.3:
+                self._buttonTime = time.time()
+                return
+            self._buttonTime = time.time()
+
             if  chan == BUTTON_PLAY and self._cbButtonPlay:
                 self._cbButtonPlay()
             elif chan == BUTTON_MUTE and self._cbButtonMute:

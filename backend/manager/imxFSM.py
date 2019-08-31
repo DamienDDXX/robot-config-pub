@@ -211,20 +211,20 @@ class imxFSM(object):
 
     # 定时器线程
     def timerThread(self, timeout, desc, event):
-        logging.debug('imxFSM.timerThread().')
+        logging.debug('imxFSM.timerThread(%d, %s).' %(timeout, desc))
         self._timerStopEvent.clear()
         self._timerStopEvent.wait(timeout)
-        if self._timerStopEvent.isSet() and event:
+        if not self._timerStopEvent.isSet() and event:
             self.putEvent(desc, event)
         self._timerThread = None
-        logging.debug('imxFSM.timerThread() fini.')
+        logging.debug('imxFSM.timerThread(%d, %s) fini.' %(timeout, desc))
 
     # 启动定时器
     def timerInit(self, timeout, desc, event):
-        logging.debug('imxFSM.timerInit().')
+        logging.debug('imxFSM.timerInit(%d, %s).' %(timeout, desc))
         if self._timerThread:
             self.timerFini()
-        self._timerThread = threading.Thread(target = timerThread, args = [timeout, desc, event, ])
+        self._timerThread = threading.Thread(target = self.timerThread, args = [timeout, desc, event, ])
         self._timerThread.start()
 
     # 停止定时器
