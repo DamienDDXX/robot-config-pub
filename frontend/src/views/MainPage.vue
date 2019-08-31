@@ -6,6 +6,7 @@
         <span class="sn">设备序列号： {{seriesNumber}}</span>
         <el-button type="danger" class="restart" icon="el-icon-refresh-left" @click="onRestartBtnClick" :loading="isRestarting">系统重启</el-button>
         <el-button type="danger" class="shutdown" @click="onShutdownBtnClick" :loading="isShutingDown">关闭系统</el-button>
+        <el-button type="primary" class="debug" @click="onMimicDebugBtnClick" :loading="isDebuging">模拟调试</el-button>
       </div>
       <div class="row sections">
         <div class="section" v-for="(section, index) in sections" :key="index">
@@ -31,6 +32,7 @@ export default {
     return {
       isRestarting: false,
       isShutingDown: false,
+      isDebuging: false,
       seriesNumber: '',
       sections: [
         {
@@ -100,6 +102,23 @@ export default {
           type: 'error'
         });
       }
+    }, 
+    async onMimicDebugBtnClick() {
+      try {
+        this.isDebuging = true;
+        await deviceQuery.shutdownServer();
+        this.isDebuging = false;
+        this.$message({
+          message: '模拟调试成功',
+          type: 'success'
+        });
+      } catch {
+        this.isDebuging = false;
+        this.$message({
+          message: '模拟调试失败',
+          type: 'error'
+        });
+      }
     }
   },
   async created() {
@@ -144,7 +163,7 @@ export default {
         margin-right:24px;
         margin-bottom: 16px;
       }
-      .restart, .shutdown {
+      .restart, .shutdown, .debug {
         margin-bottom: 16px;
       }
     }

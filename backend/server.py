@@ -82,6 +82,16 @@ def shutdown_server():
         return result, 400
 
 
+@app.route('/api/mimic_debug', methods=['post'])
+@jwt_required
+def mimic_debug():
+    status, result = device.mimic_debug()
+    if status:
+        return result, 200
+    else:
+        return result, 400
+
+
 @app.route('/api/server')
 @jwt_required
 def get_server_info():

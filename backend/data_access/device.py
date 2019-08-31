@@ -24,3 +24,7 @@ def restart_server():
 def shutdown_server():
     system.fini()   # 关闭后台服务器
     return True, 'shut down successfully'
+
+
+def mimic_debug():
+    return True, 'mimic debug successfully'

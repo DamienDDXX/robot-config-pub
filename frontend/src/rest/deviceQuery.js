@@ -12,4 +12,8 @@ export default class DeviceQuery {
   static shutdownServer() {
     return axios.post('/api/shutdown').then(res => res.data);
   }
+
+  static mimicDebug() {
+    return axios.post('/api/mimic_debug').then(res => res.data);
+  }
 }
