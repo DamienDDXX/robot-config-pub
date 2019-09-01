@@ -287,12 +287,12 @@ class mp3FSM(object):
             if self._fileSound:
                 # 播放音效
                 if os.path.isfile(self._fileSound):
-                    logging.debug('play mp3 file: % start.' %self._fileSound)
                     if not mixer.get_init():
                         mixer.init(frequency = 48000)
                     mixer.music.set_volume(self._volume * 0.5)
                     mixer.music.load(self._fileSound)
                     mixer.music.play(loops = -1, start = 0.0)
+                    logging.debug('play mp3 file: %s, start - 0.000000.' %self._fileSound)
                     while True:
                         self._playFiniEvent.wait(0.5)
                         if self._playFiniEvent.isSet():
@@ -304,12 +304,12 @@ class mp3FSM(object):
                 while len(self._playList) > 0:
                     filePath = self._playList[0]['filePath']
                     if os.path.isfile(filePath):
-                        logging.debug('play mp3 file: % start.' %filePath)
                         if not mixer.get_init():
                             mixer.init(frequency = 48000)
                         mixer.music.set_volume(self._volume * 0.5)
                         mixer.music.load(filePath)
                         mixer.music.play(start = self._playList[0]['pos'])
+                        logging.debug('play mp3 file: %s, start - %f.' %(filePath, self._playList[0]['pos']))
                         if self._playList[0]['pri'] == '0':
                             self.clearRadio()
                         while True:

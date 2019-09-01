@@ -208,7 +208,7 @@ class bandAPI(object):
                 self._hvx['systolicPre']         = buff[25] & 0xFF
                 self._hvx['diastolicPre']        = buff[30] & 0xFF
                 self._hvx['bloodPressureUpdate'] = True if (buff[24] & 0x01) == 0x01 else False
-                self._hvx['notWearingAlert']     = True if (buff[24] & 0x04) == 0x04 else False
+                self._hvx['notWearingAlert']     = True if (buff[24] & 0x02) == 0x02 else False
 
     # 连接超时回调函数
     def onConnTimeout(self, addr):
