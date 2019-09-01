@@ -231,8 +231,8 @@ class serverFSM(object):
             raise Exception('abort')
         except Exception, e:
             if e.message == 'config':
-                # 配置视频服务器
                 if platform.system().lower() == 'linux':
+                    # 配置视频服务器
                     personId = personList[0]['personId']
                     if not self._imxFSM:
                         self._imxFSM = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId, getDoctorList = self._serverAPI.getDoctorList)
@@ -241,8 +241,12 @@ class serverFSM(object):
                         self._imxFSM.setCallSoundCallback(self.cbCallSound)
                         self._buttonAPI.setCallCallback(self._imxFSM.cbButtonCall)
                         self._buttonAPI.setMuteCallback(self._imxFSM.cbButtonMute)
-                # TODO:
-                #   配置蓝牙手环管理
+
+                    # 配置蓝牙手环
+                    if not self._bandFSM:
+                        _, mac = bracelet.get_bracelet_mac(1)
+                        self._bandFSM = bandFSM(mac = mac)
+
                 self._confUpdated = True     # 配置更新成功
                 self.putEvent('evtConfigOk', self.evtConfigOk)
             elif e.message == 'abort':
@@ -321,7 +325,6 @@ class serverFSM(object):
                 self._imxFSM.fini()
             if self._bandFSM:
                 self._bandFSM.finit()
-
         if self._fsmThread:
             self.putEvent('fini', None)
             while self._fsmThread or self._loginThread or self._configThread or self._heartbeatThread:

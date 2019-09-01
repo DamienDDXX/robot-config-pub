@@ -12,6 +12,7 @@ if __name__ == '__main__':
     sys.path.append('..')
 
 from utility import setLogging
+from data_access import bracelet
 from manager.bandAPI import bandAPI
 
 __all__ = [
@@ -24,10 +25,10 @@ MONITOR_INV = 30 * 60
 # 手环管理状态机类
 class bandFSM(object):
     # 初始化
-    def __init__(self, inv = MONITOR_INV):
+    def __init__(self, mac = None, inv = MONITOR_INV):
         self._bandAPI = bandAPI()
+        self._mac = mac
         self._inv = inv
-        _, self._mac = self._bandAPI.getBand()
         self._timerThread = None
         self._timerStopEvent = threading.Event()
         self._scanThread = None
@@ -110,6 +111,7 @@ class bandFSM(object):
         if self._mac and not self._timerThread:
             # 间隔指定时间后监控健康数据
             self._timerThread = threading.Thread(target = self.timerThread, args = [self._inv, 'evtMonitor', self.evtMonitor])
+            self._timerThread.start()
 
     # 扫描手环
     def actScan(self):
@@ -151,7 +153,7 @@ class bandFSM(object):
     def fsmThread(self):
         logging.debug('bandFSM.fsmThread().')
         try:
-            self.to_stateIdle()
+            self.to_stateInit()
             while True:
                 ret, desc, event = self.getEvent()
                 if ret:
@@ -161,6 +163,11 @@ class bandFSM(object):
                         event()
                         logging.debug('bandFSM: state - %s', self.state)
         finally:
+            if self._timerThread:
+                self._timerStopEvent.set()
+                while self._timerThread:
+                    time.sleep(0.5)
+
             self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]
@@ -180,7 +187,7 @@ class bandFSM(object):
     # 扫描手环线程
     def scanThread(self, desc, event):
         logging.debug('bandFSM.scanThread(%s).' %desc)
-        self.bandAPI.scan()
+        self._bandAPI.scan()
         if event:
             self.putEvent(desc, event)
         logging.debug('bandFSM.scanThread(%s) fini.' %desc)
@@ -189,7 +196,7 @@ class bandFSM(object):
     # 手环监控线程
     def monitorThread(self, desc, event):
         logging.debug('bandFSM.monitorThread(%s).' %desc)
-        self.bandAPI.monitor()
+        self._bandAPI.monitor(self._mac)
         if event:
             self.putEvent(desc, event)
         logging.debug('bandFSM.monitorThread(%s) fini.' %desc)
@@ -198,10 +205,6 @@ class bandFSM(object):
     # 终止手环管理状态机
     def fini(self):
         logging.debug('bandFSM.fini().')
-        if self._timerThread:
-            self._timerStopEvent.set()
-            while self._timerThread:
-                time.sleep(0.5)
         if self._fsmThread:
             self.putEvent('fini', None)
             while self._fsmThread:
@@ -212,7 +215,8 @@ class bandFSM(object):
 # 测试程序
 if __name__ == '__main__':
     try:
-        fsm = bandFSM(inv = 3 * 60)
+        _, mac = bracelet.get_bracelet_mac(1)
+        fsm = bandFSM(mac = mac, inv = 1 * 60)
         while (1):
             time.sleep(1)
     except KeyboardInterrupt:

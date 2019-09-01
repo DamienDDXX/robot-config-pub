@@ -10,6 +10,7 @@ import traceback
 if __name__ == '__main__':
     import sys
     sys.path.append('..')
+    from data_access import bracelet
 
 from utility import setLogging
 
@@ -132,10 +133,9 @@ class bandAPI(object):
         ret = False
         self._connIsOk = False
         self._connEvent.clear()
-        self._cdll.us_ble_connect.restype = c_bool
-        if bool(self._cdll.us_ble_connect(self.stringToMac(addr))):
-            self._connEvent.wait(30)
-            ret = True if self._connIsOk else False
+        self._cdll.us_ble_connect(self.stringToMac(addr))
+        self._connEvent.wait(30)
+        ret = True if self._connIsOk else False
         if not ret:
             self.reportError()
         logging.debug('bandAPI.connect(%s) %s.' %(addr, 'success' if ret else 'failed'))
@@ -246,7 +246,7 @@ class bandAPI(object):
             logging.debug('temperature - %d' %(buff[5] * 256 + buff[4]))
         elif cmd == 0x4C:
             # 全部健康数据
-            self._hvx['heartrate'] = str(buff[4])
+            self._hvx['heartRate'] = str(buff[4])
             self._hvx['diastolicPre'] = str(buff[5])
             self._hvx['systolicPre'] = str(buff[6])
             logging.debug('heartRate - %d, diastolicPre - %d, systolicPre - %d' %(buff[4], buff[5], buff[6]))
@@ -347,28 +347,6 @@ class bandAPI(object):
             return True, self._hvx
         return False, None
 
-    # 获取手环配置
-    def getBand(self):
-        from data_access import bracelet
-        logging.debug('bandAPI.getBand().')
-        ret, band = False, None
-        try:
-            ret, bandList = bracelet.get_configured_bracelet_list()
-            if len(bandList) > 0:
-                band = str(bandList[0]['mac'])
-                if len(band) == 12:
-                    for i in range(0, 6):
-                        val = int(band[2 * i : 2 * (i + 1)], 16)
-                        if val < 0 or val > 255:
-                            raise ValueError
-                    ret = True
-                else:
-                    raise Exception
-        except:
-            ret, band = False, None
-        finally:
-            return ret, band
-
 
 ################################################################################
 # 测试程序
@@ -377,17 +355,17 @@ if __name__ == '__main__':
         scanList = []
         api = bandAPI()
         if api.init():
-            ret, band = api.getBand()
-            if not ret:
+            _, mac = bracelet.get_bracelet_mac(1)
+            if not mac:
                 while True:
                     ret, scanList = api.scan()
                     if ret and len(scanList) > 0:
-                        band = scanList[0]['mac']
+                        mac = scanList[0]['mac']
                         print(scanList)
                         break;
                     time.sleep(30)
             while True:
-                ret, hvx = api.monitor(band)
+                ret, hvx = api.monitor(mac)
                 if ret:
                     print(hvx)
                 time.sleep(60)

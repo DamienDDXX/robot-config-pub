@@ -114,3 +114,25 @@ def get_scanned_bracelet_list():
         return True, []
     else:
         return True, []
+
+
+# 获取手环地址
+def get_bracelet_mac(bracelet_id):
+    try:
+        mac = None
+        ret, band = get_bracelet_info(bracelet_id)
+        if ret:
+            mac = band['mac']
+            if len(mac) == 12:
+                for i in range(0, 6):
+                    val = int(mac[2 * i : 2 * (i + 1)], 16)
+                    if val < 0 or val > 255:
+                        raise ValueError
+                ret = True
+            else:
+                raise Exception
+    except:
+        ret, mac = False, None
+    finally:
+        return ret, mac
+
