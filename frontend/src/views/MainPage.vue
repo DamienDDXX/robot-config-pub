@@ -106,7 +106,7 @@ export default {
     async onMimicDebugBtnClick() {
       try {
         this.isDebuging = true;
-        await deviceQuery.shutdownServer();
+        await deviceQuery.mimicDebug();
         this.isDebuging = false;
         this.$message({
           message: '模拟调试成功',
