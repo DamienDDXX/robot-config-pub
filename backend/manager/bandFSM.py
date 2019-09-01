@@ -91,7 +91,7 @@ class bandFSM(object):
     # 初始化
     def actInit(self):
         logging.debug('bandFSM.actInit().')
-        if self.bandAPI.init():
+        if self._bandAPI.init():
             self.putEvent('evtInitOk', self.evtInitOk)
         else:
             self.putEvent('evtError', self.evtError)

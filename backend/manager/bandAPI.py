@@ -323,7 +323,7 @@ class bandAPI(object):
     def monitor(self, addr):
         logging.debug('bandAPI.monitor(%s).' %addr)
         if self.connect(addr):
-            self.fsetTime()                 # 设置手环时间
+            self.setTime()                 # 设置手环时间
             time.sleep(1)
             self.requestBattery()           # 请求获取手环电量信息
             time.sleep(1)
@@ -338,10 +338,10 @@ class bandAPI(object):
 
             # 获取测量结果后，断开连接
             if self._connIsOk:
-                self.frequestHealth(False)  # 关闭测量健康数据
+                self.requestHealth(False)  # 关闭测量健康数据
                 time.sleep(1)
                 self.disconnect()           # 断开连接
-            time.sleep(5)
+            time.sleep(3)
             self._band = addr
             self.scan()                     # 再次进行扫描，以获取手环的佩戴状态信息
             return True, self._hvx
@@ -376,7 +376,7 @@ if __name__ == '__main__':
     try:
         scanList = []
         api = bandAPI()
-        if qpi.init():
+        if api.init():
             ret, band = api.getBand()
             if not ret:
                 while True:

@@ -345,6 +345,8 @@ class mp3FSM(object):
             self.putEvent('fini', None)
             while self._fsmThread or self._playThread or self._updateThread:
                 time.sleep(0.5)
+            if mixer.get_init():
+                mixer.quit()
 
     # 向音频状态机事件队列发送事件
     def putEvent(self, desc, event):

@@ -7,7 +7,6 @@ import logging
 
 if __name__ == '__main__':
     import sys
-    import time
     sys.path.append('..')
 
 from utility import setLogging
@@ -49,30 +48,59 @@ elif platform.system().lower() == 'windows':
 else:
     raise NotImplementedError
 
+# 局部变量
+_buttonTime = time.time()
+_buttonInited = False
+
+_cbButtonPlay = None        # 播放按键回调函数指针
+_cbButtonMute = None        # 自动接入按键回调函数指针
+_cbButtonCall = None        # 呼叫按键回调函数指针
+_cbButtonPower = None       # 电源按键回调函数指针
+_cbButtonIncVolume = None   # 音量增加按键回调函数指针
+_cbButtonDecVolume = None   # 音量减少按键回调函数指针
+if platform.system().lower() == 'windows':
+    _cbButtonImx = None     # 视频模拟按键回调函数指针
+    _cbButtonRadio = None   # 广播模拟按键回调函数指针
+    _pressed = False
+
+# 按键回调函数
+def cbButton(chan):
+    global _buttonTime
+    global _cbButtonPlay, _cbButtonMute, _cbButtonCall, _cbButtonPower, _cbButtonIncVolume, _cbButtonDecVolume
+    if time.time() - _buttonTime < 0.3:
+        _buttonTime = time.time()
+        return
+    _buttonTime = time.time()
+
+    if  chan == BUTTON_PLAY and _cbButtonPlay:
+        _cbButtonPlay()
+    elif chan == BUTTON_MUTE and _cbButtonMute:
+        _cbButtonMute()
+    elif chan == BUTTON_CALL and _cbButtonCall:
+        _cbButtonCall()
+    elif chan == BUTTON_POWER and _cbButtonPower:
+        _cbButtonPower()
+    elif chan == BUTTON_INC_VOLUME and _cbButtonIncVolume:
+        _cbButtonIncVolume()
+    elif chan == BUTTON_DEC_VOLUME and _cbButtonDecVolume:
+        _cbButtonDecVolume()
+
 # 按键接口类
 class buttonAPI(object):
     # 初始化
     def __init__(self):
-        self._buttonTime        = time.time()
-        self._cbButtonPlay      = None    # 播放按键回调函数指针
-        self._cbButtonMute      = None    # 自动接入按键回调函数指针
-        self._cbButtonCall      = None    # 呼叫按键回调函数指针
-        self._cbButtonPower     = None    # 电源按键回调函数指针
-        self._cbButtonIncVolume = None    # 音量增加按键回调函数指针
-        self._cbButtonDecVolume = None    # 音量减少按键回调函数指针
-        if platform.system().lower() == 'windows':
-            self._cbButtonImx   = None    # 视频模拟按键回调函数指针
-            self._cbButtonRadio = None    # 广播模拟按键回调函数指针
-            self._pressed       = False
-
         if platform.system().lower() == 'linux':
-            # 初始化按键端口及回调函数
-            GPIO.setwarnings(False)
-            GPIO.setmode(GPIO.BCM)
-            buttonList = [ BUTTON_PLAY, BUTTON_MUTE, BUTTON_CALL, BUTTON_POWER, BUTTON_INC_VOLUME, BUTTON_DEC_VOLUME ]
-            for button in buttonList:
-                GPIO.setup(button, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-                GPIO.add_event_detect(button, GPIO.FALLING, callback = self.callback, bouncetime = 10)
+            global _buttonInited
+            if not _buttonInited:
+                _buttonInited = True    # 避免重复初始化
+
+                # 初始化按键端口及回调函数
+                GPIO.setwarnings(False)
+                GPIO.setmode(GPIO.BCM)
+                buttonList = [ BUTTON_PLAY, BUTTON_MUTE, BUTTON_CALL, BUTTON_POWER, BUTTON_INC_VOLUME, BUTTON_DEC_VOLUME ]
+                for button in buttonList:
+                    GPIO.setup(button, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+                    GPIO.add_event_detect(button, GPIO.FALLING, callback = cbButton, bouncetime = 10)
         elif platform.system().lower() == 'windows':
             # 启动按键模拟线程
             self._finiEvent = threading.Event()
@@ -84,91 +112,81 @@ class buttonAPI(object):
 
     # 设置播放按键处理回调函数
     def setPlayCallback(self, cb):
-        self._cbButtonPlay, cb = cb, self._cbButtonPlay
+        global _cbButtonPlay
+        _cbButtonPlay, cb = cb, _cbButtonPlay
         return cb
 
     # 设置呼叫按键处理回调函数
     def setCallCallback(self, cb):
-        self._cbButtonCall, cb = cb, self._cbButtonCall
+        global _cbButtonCall
+        _cbButtonCall, cb = cb, _cbButtonCall
         return cb
 
     # 设置关闭自动接入按键处理回调函数
     def setMuteCallback(self, cb):
-        self._cbButtonMute, cb = cb, self._cbButtonMute
+        global _cbButtonMute
+        _cbButtonMute, cb = cb, _cbButtonMute
         return cb
 
     # 设置电源按键处理回调函数
     def setPowerCallback(self, cb):
-        self._cbButtonPower, cb = cb, self._cbButtonPower
+        global _cbButtonPower
+        _cbButtonPower, cb = cb, _cbButtonPower
         return cb
 
     # 设置音量增加键处理回调函数
     def setIncVolumeCallback(self, cb):
-        self._cbButtonIncVolume, cb = cb, self._cbButtonIncVolume
+        global _cbButtonIncVolume
+        _cbButtonIncVolume, cb = cb, _cbButtonIncVolume
         return cb
 
     # 设置音量减少键处理回调函数
     def setDecVolumeCallback(self, cb):
-        self._cbButtonDecVolume, cb = cb, self._cbButtonDecVolume
+        global _cbButtonDecVolume
+        _cbButtonDecVolume, cb = cb, _cbButtonDecVolume
         return cb
 
-    if platform.system().lower() == 'linux':
-        # 按键回调函数
-        def callback(self, chan):
-            if time.time() - self._buttonTime < 0.3:
-                self._buttonTime = time.time()
-                return
-            self._buttonTime = time.time()
-
-            if  chan == BUTTON_PLAY and self._cbButtonPlay:
-                self._cbButtonPlay()
-            elif chan == BUTTON_MUTE and self._cbButtonMute:
-                self._cbButtonMute()
-            elif chan == BUTTON_CALL and self._cbButtonCall:
-                self._cbButtonCall()
-            elif chan == BUTTON_POWER and self._cbButtonPower:
-                self._cbButtonPower()
-            elif chan == BUTTON_INC_VOLUME and self._cbButtonIncVolume:
-                self._cbButtonIncVolume()
-            elif chan == BUTTON_DEC_VOLUME and self._cbButtonDecVolume:
-                self._cbButtonDecVolume()
-
-    elif platform.system().lower() == 'windows':
+    if platform.system().lower() == 'windows':
         # 设置视频模拟键处理回调函数
         def setImxCallback(self, cb):
-            self._cbButtonImx, cb = cb, self._cbButtonImx
+            global _cbButtonImx
+            _cbButtonImx, cb = cb, _cbButtonImx
             return cb
 
         # 设置广播模拟键处理回调函数
         def setRadioCallback(self, cb):
-            self._cbButtonRadio, cb = cb, self._cbButtonRadio
+            global _cbButtonRadio
+            _cbButtonRadio, cb = cb, _cbButtonRadio
             return cb
 
         # 按下回调函数
         def onButtonDown(self, event):
-            if not self._pressed:
-                self._pressed = True
-                if event.Key == BUTTON_POWER and self._cbButtonPower:
-                    self._cbButtonPower()
-                elif event.Key == BUTTON_INC_VOLUME and self._cbButtonIncVolume:
-                    self._cbButtonIncVolume()
-                elif event.Key == BUTTON_DEC_VOLUME and self._cbButtonDecVolume:
-                    self._cbButtonDecVolume()
-                elif event.Key == BUTTON_MUTE and self._cbButtonMute:
-                    self._cbButtonMute()
-                elif event.Key == BUTTON_PLAY and self._cbButtonPlay:
-                    self._cbButtonPlay()
-                elif event.Key == BUTTON_CALL and self._cbButtonCall:
-                    self._cbButtonCall()
-                elif event.Key == BUTTON_IMX and self._cbButtonImx:
-                    self._cbButtonImx()
-                elif event.Key == BUTTON_RADIO and self._cbButtonRadio:
-                    self._cbButtonRadio()
+            global _pressed
+            global _cbButtonPower, _cbButtonIncVolume, _cbButtonDecVolume, _cbButtonMute, _cbButtonPlay, _cbButtonCall, _cbButtonImx, _cbButtonRadio
+            if not _pressed:
+                _pressed = True
+                if event.Key == BUTTON_POWER and _cbButtonPower:
+                    _cbButtonPower()
+                elif event.Key == BUTTON_INC_VOLUME and _cbButtonIncVolume:
+                    _cbButtonIncVolume()
+                elif event.Key == BUTTON_DEC_VOLUME and _cbButtonDecVolume:
+                    _cbButtonDecVolume()
+                elif event.Key == BUTTON_MUTE and _cbButtonMute:
+                    _cbButtonMute()
+                elif event.Key == BUTTON_PLAY and _cbButtonPlay:
+                    _cbButtonPlay()
+                elif event.Key == BUTTON_CALL and _cbButtonCall:
+                    _cbButtonCall()
+                elif event.Key == BUTTON_IMX and _cbButtonImx:
+                    _cbButtonImx()
+                elif event.Key == BUTTON_RADIO and _cbButtonRadio:
+                    _cbButtonRadio()
             return True
 
         # 抬起回调函数
         def onButtonUp(self, event):
-            self._pressed = False
+            global _pressed
+            _pressed = False
             return True
 
         # 按键模拟线程
@@ -188,9 +206,6 @@ class buttonAPI(object):
             logging.debug('buttonAPI.fini().')
             if self._thread:
                 self._finiEvent.set()
-
-    else:
-        raise NotImplementedError
 
 
 ################################################################################
