@@ -21,6 +21,7 @@ from manager.buttonAPI import buttonAPI
 if platform.system().lower() == 'linux':
     from manager.imxFSM import imxFSM
     from manager.bandFSM import bandFSM
+    from data_access import bracelet
 
 __all__ = [
         'serverFSM',
@@ -324,7 +325,7 @@ class serverFSM(object):
             if self._imxFSM:
                 self._imxFSM.fini()
             if self._bandFSM:
-                self._bandFSM.finit()
+                self._bandFSM.fini()
         if self._fsmThread:
             self.putEvent('fini', None)
             while self._fsmThread or self._loginThread or self._configThread or self._heartbeatThread:

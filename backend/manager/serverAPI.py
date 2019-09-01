@@ -66,6 +66,7 @@ class serverAPI(object):
         ret, loginToken = self.getLoginToken()
         if ret:
             try:
+                ret = False
                 loginUrl = self._hostName + ':' + self._portNumber + LOGIN_URL_POSTFIX
                 logging.debug('login: url - %s, loginToken - %s' %(loginUrl, loginToken))
                 headers = {
