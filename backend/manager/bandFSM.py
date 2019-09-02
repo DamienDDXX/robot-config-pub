@@ -29,8 +29,11 @@ class bandFSM(object):
         self._bandAPI = bandAPI()
         self._mac = mac
         self._inv = inv
+
         self._timerThread = None
-        self._timerStopEvent = threading.Event()
+        self._timerFiniEvent = threading.Event()
+        self._timerDoneEvent = threading.Event()
+
         self._scanThread = None
         self._monitorThread = None
         self._states = [
@@ -86,6 +89,8 @@ class bandFSM(object):
         self._machine = Machine(self, states = self._states, transitions = self._transitions, ignore_invalid_triggers = True)
         self._eventQueue = Queue.Queue(5)
         self._eventList = []
+
+        self._fsmDoneEvent = threading.Event()
         self._fsmThread = threading.Thread(target = self.fsmThread)
         self._fsmThread.start()
 
@@ -100,18 +105,13 @@ class bandFSM(object):
     # 重新初始化
     def actReinit(self):
         logging.debug('bandFSM.actReinit().')
-        if not self._timerThread:
-            # 30s 后重新初始化
-            self._timerThread = threading.Thread(target = self.timerThread, args = [30, 'evtInit', self.evtInit, ])
-            self._timerThread.start()
+        self.timerInit(30, 'evtInit', self.evtInit)
 
     # 空闲处理
     def actIdle(self):
         logging.debug('bandFSM.actIdle().')
-        if self._mac and not self._timerThread:
-            # 间隔指定时间后监控健康数据
-            self._timerThread = threading.Thread(target = self.timerThread, args = [self._inv, 'evtMonitor', self.evtMonitor])
-            self._timerThread.start()
+        if self._mac:
+            self.timerInit(self._inv, 'evtMonitor', self.evtMonitor)    # 间隔指定时间后监控健康数据
 
     # 扫描手环
     def actScan(self):
@@ -153,6 +153,7 @@ class bandFSM(object):
     def fsmThread(self):
         logging.debug('bandFSM.fsmThread().')
         try:
+            self._fsmDoneEvent.clear()
             self.to_stateInit()
             while True:
                 ret, desc, event = self.getEvent()
@@ -163,26 +164,40 @@ class bandFSM(object):
                         event()
                         logging.debug('bandFSM: state - %s', self.state)
         finally:
-            if self._timerThread:
-                self._timerStopEvent.set()
-                while self._timerThread:
-                    time.sleep(0.5)
-
+            self.timerFini()
             self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]
             self._fsmThread = None
+            self._fsmDoneEvent.set()
             logging.debug('bandFSM.fsmThread() fini.')
 
     # 定时器线程
     def timerThread(self, timeout, desc, event):
         logging.debug('bandFSM.timerThread(%s).' %desc)
-        self._timerStopEvent.clear()
-        self._timerStopEvent.wait(timeout)
-        if not self._timerStopEvent.isSet() and event:
+        self._timerDoneEvent.clear()
+        self._timerFiniEvent.clear()
+        self._timerFiniEvent.wait(timeout)
+        if not self._timerFiniEvent.isSet() and event:
             self.putEvent(desc, event)
         self._timerThread = None
+        self._timerDoneEvent.set()
         logging.debug('bandFSM.timerThread(%s) fini.' %desc)
+
+    # 启动定时器
+    def timerInit(self, timeout, desc, event):
+        logging.debug('bandFSM.timerInit(%s).' %desc)
+        if self._timerThread:
+            self.timerFini()
+        self._timerThread = threading.Thread(target = self.timerThread, args = [timeout, desc, event, ])
+        self._timerThread.start()
+
+    # 停止定时器
+    def timerFini(self):
+        logging.debug('bandFSM.timerFini().')
+        if self._timerThread:
+            self._timerFiniEvent.set()
+            self._timerDoneEvent.wait()
 
     # 扫描手环线程
     def scanThread(self, desc, event):
@@ -207,8 +222,7 @@ class bandFSM(object):
         logging.debug('bandFSM.fini().')
         if self._fsmThread:
             self.putEvent('fini', None)
-            while self._fsmThread:
-                time.sleep(0.5)
+            self._fsmDoneEvent.wait()
 
 
 ################################################################################
@@ -217,7 +231,7 @@ if __name__ == '__main__':
     try:
         _, mac = bracelet.get_bracelet_mac(1)
         fsm = bandFSM(mac = mac, inv = 1 * 60)
-        while (1):
+        while True:
             time.sleep(1)
     except KeyboardInterrupt:
         fsm.fini()

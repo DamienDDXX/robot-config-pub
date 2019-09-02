@@ -53,8 +53,16 @@ class serverFSM(object):
         self._playUpdated = False
 
         self._loginThread = None
+        self._loginFiniEvent = threading.Event()
+        self._loginDoneEvent = threading.Event()
+
         self._configThread = None
+        self._configFiniEvent = threading.Event()
+        self._configDoneEvent = threading.Event()
+
         self._heartbeatThread = None
+        self._heartbeatFiniEvent = threading.Event()
+        self._heartbeatDoneEvent = threading.Event()
 
         self._mp3FSM = None
         self._imxFSM = None
@@ -106,23 +114,19 @@ class serverFSM(object):
         self._eventList = []
         self._eventQueue = Queue.Queue(5)
         self._machine = Machine(self, states = self._states, transitions = self._transitions, ignore_invalid_triggers = True)
-        self._finiEvent = threading.Event()
+        self._fsmDoneEvent = threading.Event()
         self._fsmThread = threading.Thread(target = self.fsmThread)
         self._fsmThread.start()
 
     # 登录服务器
     def actLogin(self):
         logging.debug('serverFSM.actLogin().')
-        if not self._loginThread:
-            self._loginThread = threading.Thread(target = self.loginThread)
-            self._loginThread.start()
+        self.loginInit()
 
     # 获取配置
     def actConfig(self):
         logging.debug('serverFSM.actConfig().')
-        if not self._configThread:
-            self._configThread = threading.Thread(target = self.configThread)
-            self._configThread.start()
+        self.configInit()
 
     # 心跳同步
     def actHeartbeat(self):
@@ -168,14 +172,16 @@ class serverFSM(object):
     def loginThread(self):
         logging.debug('serverFSM.loginThread().')
         try:
+            self._loginDoneEvent.clear()
+            self._loginFiniEvent.clear()
             while True:
                 ret, self._token = self._serverAPI.login()
                 if ret:
                     raise Exception('login')
                 logging.debug('login failed')
                 logging.debug('retry to login in 30s.')
-                self._finiEvent.wait(30)
-                if self._finiEvent.isSet():
+                self._loginFiniEvent.wait(30)
+                if self._loginFiniEvent.isSet():
                     raise Exception('fini')
         except Exception, e:
             if e.message == 'login':
@@ -192,7 +198,22 @@ class serverFSM(object):
                 self.putEvent('evtLoginOk', self.evtLoginOk)
         finally:
             self._loginThread = None
+            self._loginDoneEvent.set()
             logging.debug('serverFSM.loginThread() fini.')
+
+    # 启动登录
+    def loginInit(self):
+        logging.debug('serverFSM.loginInit().')
+        if not self._loginThread:
+            self._loginThread = threading.Thread(target = self.loginThread)
+            self._loginThread.start()
+
+    # 终止登录
+    def loginFini(self):
+        logging.debug('serverFSM.loginFini().')
+        if self._loginThread:
+            self._loginFiniEvent.set()
+            self._loginDoneEvent.wait()
 
     # 进入视频通话模式回调函数
     def cbEntryImxMode(self):
@@ -220,14 +241,16 @@ class serverFSM(object):
     def configThread(self):
         logging.debug('serverFSM.configThread().')
         try:
+            self._configDoneEvent.clear()
+            self._configFiniEvent.clear()
             for retry in range(0, 6):
                 ret, vsvrIp, vsvrPort, personList = self._serverAPI.getConfig()
                 if ret:
                     raise Exception('config')
                 logging.debug('get config failed.')
                 logging.debug('retry to get config in 30s.')
-                self._finiEvent.wait(30)
-                if self._finiEvent.isSet():
+                self._configFiniEvent.wait(30)
+                if self._configFiniEvent.isSet():
                     raise Exception('fini')
             raise Exception('abort')
         except Exception, e:
@@ -254,7 +277,22 @@ class serverFSM(object):
                 self.putEvent('evtFailed', self.evtFailed)
         finally:
             self._configThread = None
+            self._configDoneEvent.set()
             logging.debug('serverFSM.configThread() fini.')
+
+    # 开始配置
+    def configInit(self):
+        logging.debug('serverFSM.configInit().')
+        if not self._configThread:
+            self._configThread = threading.Thread(target = self.configThread)
+            self._configThread.start()
+
+    # 终止配置
+    def configFini(self):
+        logging.debug('serverFSM.configFini().')
+        if self._configThread:
+            self._configFiniEvent.set()
+            self._configDoneEvent.wait()
 
     # 后台心跳同步处理
     #   如果失败，间隔 30s 后重新同步
@@ -262,8 +300,10 @@ class serverFSM(object):
     def heartbeatThread(self):
         logging.debug('serverFSM.heartbeatThread().')
         try:
-            self._finiEvent.wait(self._heartbeatInv)
-            if self._finiEvent.isSet():
+            self._heartbeatDoneEvent.clear()
+            self._heartbeatFiniEvent.clear()
+            self._heartbeatFiniEvent.wait(self._heartbeatInv)
+            if self._heartbeatFiniEvent.isSet():
                 raise Exception('fini')
             for retry in range(0, 6):
                 ret, playVer, confVer = self._serverAPI.heatbeat(playVer = self._playVer if self._playUpdated else None,
@@ -280,8 +320,8 @@ class serverFSM(object):
                     raise Exception('ok')
                 logging.debug('heartbeat failed.')
                 logging.debug('retry to heatbeat in 30s.')
-                self._finiEvent.wait(30)
-                if self._finiEvent.isSet():
+                self._heartbeatFiniEvent.wait(30)
+                if self._heartbeatFiniEvent.isSet():
                     raise Exception('fini')
             logging.debug('heatbeat timeout.')
             raise Exception('fail')
@@ -292,13 +332,28 @@ class serverFSM(object):
                 self.putEvent('evtFailed', self.evtFailed)
         finally:
             self._heartbeatThread = None
+            self._heartbeatDoneEvent.set()
             logging.debug('serverFSM.heartbeatThread() fini.')
+
+    # 启动心跳同步
+    def heatbeatInit(self):
+        logging.debug('serverFSM.heatbeatInit().')
+        if not self._heartbeatThread:
+            self._heartbeatThread = threading.Thread(target = self.heartbeatThread)
+            self._heartbeatThread.start()
+
+    # 终止心跳同步
+    def heatbeatFini(self):
+        logging.debug('serverFSM.heatbeatFini().')
+        if self._heartbeatThread:
+            self._heartbeatFiniEvent.set()
+            self._heartbeatDoneEvent.wait()
 
     # 系统服务器状态机后台线程
     def fsmThread(self):
         logging.debug('serverFSM.fsmThread().')
         try:
-            self._finiEvent.clear()
+            self._fsmDoneEvent.clear()
             self.to_stateLogin()    # 切换到登录状态
             while True:
                 ret, desc, event = self.getEvent()
@@ -309,11 +364,15 @@ class serverFSM(object):
                         event()
                         logging.debug('serverFSM: state - %s', self.state)
         finally:
-            self._finiEvent.set()
+            self.loginFini()
+            self.configFini()
+            self.heatbeatFini()
+
             self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]
             self._fsmThread = None
+            self._fsmDoneEvent.set()
             logging.debug('serverFSM.fsmThread() fini.')
 
     # 终止系统服务器状态机
@@ -328,9 +387,7 @@ class serverFSM(object):
                 self._bandFSM.fini()
         if self._fsmThread:
             self.putEvent('fini', None)
-            while self._fsmThread or self._loginThread or self._configThread or self._heartbeatThread:
-                time.sleep(0.5)
-        self._fsmThread = None
+            self._fsmDoneEvent.wait()
 
 
 ###############################################################################
