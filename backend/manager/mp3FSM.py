@@ -64,6 +64,8 @@ class mp3FSM(object):
         self._updateThread = None
         self._updateFiniEvent = threading.Event()
         self._updateDoneEvent = threading.Event()
+        self._updateHaltEvent = threading.Event()
+        self._updateHaltEvent.clear()
 
         self._states = [
             State(name = 'stateInit',   on_enter = 'actUpdate',     ignore_invalid_triggers = True),
@@ -226,6 +228,11 @@ class mp3FSM(object):
                                     with open(filePath, 'wb') as mp3File:
                                         for chunk in rsp.iter_content(chunk_size = 1024):
                                             if chunk:
+                                                # 暂时停止下载
+                                                while self._updateHaltEvent.isSet():
+                                                    self._updateFiniEvent.wait(1)
+                                                    if self._updateFiniEvent.isSet():
+                                                        raise Exception('fini')
                                                 if self._updateFiniEvent.isSet():
                                                     raise Exception('fini')
                                                 mp3File.write(chunk)
@@ -389,7 +396,7 @@ class mp3FSM(object):
     # 开始更新音频文件
     def updateInit(self, cbDone):
         logging.debug('mp3FSM.updateInit().')
-        if not self._updateThread:
+        if not self._updateThread and not self._updateHaltEvent.isSet():
             self._updateThread = threading.Thread(target = self.updateThread, args = [cbDone, ])
             self._updateThread.start()
 
@@ -483,11 +490,13 @@ class mp3FSM(object):
     # 处理视频开始
     def actImxOn(self):
         logging.debug('mp3FSM.actImxOn().')
+        self._updateHaltEvent.set()
         self.playFini(quit = True)
 
     # 处理视频结束
     def actImxOff(self):
         logging.debug('mp3FSM.actImxOff().')
+        self._updateHaltEvent.clear()
         if len(self._playList) > 0:
             self.playInit()
 
