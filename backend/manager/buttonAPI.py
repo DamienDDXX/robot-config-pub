@@ -32,8 +32,8 @@ if platform.system().lower() == 'linux':
     BUTTON_DEC_VOLUME   = 25    # 音量减少
     BUTTON_MUTE         = 8     # 关闭自动接入
 
-    BUTTON_PLAY         = 7     # 播放
-    BUTTON_CALL         = 16    # 呼叫
+    BUTTON_PLAY         = 16    # 播放
+    BUTTON_CALL         = 7     # 呼叫
 elif platform.system().lower() == 'windows':
     BUTTON_POWER        = 'R'   # 'r' - 电源
     BUTTON_INC_VOLUME   = 'I'   # 'i' - 音量增加
