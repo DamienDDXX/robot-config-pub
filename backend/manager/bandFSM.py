@@ -181,8 +181,8 @@ class bandFSM(object):
         if not self._timerFiniEvent.isSet() and event:
             self.putEvent(desc, event)
         self._timerThread = None
-        self._timerDoneEvent.set()
         logging.debug('bandFSM.timerThread(%s) fini.' %desc)
+        self._timerDoneEvent.set()
 
     # 启动定时器
     def timerInit(self, timeout, desc, event):

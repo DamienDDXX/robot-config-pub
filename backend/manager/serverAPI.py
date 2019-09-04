@@ -260,7 +260,6 @@ class serverAPI(object):
             return ret, playUpdate, confUpdate
 
 
-
 ################################################################################
 # 测试程序
 if __name__ == '__main__':

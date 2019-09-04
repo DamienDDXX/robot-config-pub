@@ -134,7 +134,6 @@ class imxAPI(object):
 
         self._login = False
         self._loginEvent = threading.Event()
-        self._loginEvent.clear()
 
         self._cbCallEventUnkown = None
         self._cbCallEventCalling = None
@@ -359,7 +358,6 @@ class imxAPI(object):
 
     # 登录/登出事件处理回调函数
     def cbLogin(self, notify, data):
-        self._loginEvent.set()
         logging.debug('imxAPI.cbLogin() status: %d, descript: %s' %(notify.event, self.descriptLoginEvent(notify.event)))
         if notify.event == le_login.value:
             self._login = True
@@ -367,6 +365,7 @@ class imxAPI(object):
         else:
             self._login = False
             logging.debug('user is offline.')
+        self._loginEvent.set()
 
     # 呼叫事件处理回调函数
     def cbCallEvent(self, notify, data):

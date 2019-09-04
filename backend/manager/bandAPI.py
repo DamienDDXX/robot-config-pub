@@ -59,11 +59,9 @@ class bandAPI(object):
         self._connIsOk = False
         self._connHandle = None
         self._connEvent = threading.Event()
-        self._connEvent.clear()
 
         self._scanList = []
         self._scanEvent = threading.Event()
-        self._scanEvent.clear()
 
         self._hvx = {}
         self._mac = (c_ubyte * 6)()
@@ -177,17 +175,17 @@ class bandAPI(object):
     # 连接成功处理回调函数
     def onConnected(self, addr, handle):
         logging.debug('bandAPI.onConnected().')
-        self._connEvent.set()
         self._cdll.us_ble_enable_cccd(c_ushort(handle))
         self._connHandle = handle
         self._connIsOk = True
+        self._connEvent.set()
 
     # 连接断开回调函数
     def onDisconnected(self, handle):
         logging.debug('bandAPI.onDisconnected().')
-        self._connEvent.set()
         self._connHandle = 0xFFFF
         self._connIsOk = False
+        self._connEvent.set()
 
     # 扫描结果处理回调函数
     def onAdvReport(self, addr, type, buff, length, rssi):
@@ -212,16 +210,16 @@ class bandAPI(object):
 
     # 连接超时回调函数
     def onConnTimeout(self, addr):
-        self._connEvent.set()
         self._connIsOk = False
+        self._connEvent.set()
         logging.debug('bandAPI.onConnTimeout(%s).' %self.macToString(addr))
 
     # 扫描结束回调函数
     def onScanTimeout(self):
-        self._scanEvent.set()
         logging.debug('bandAPI.onScanTimeout().')
         for band in self._scanList:
             logging.debug('mac - %s' %band['mac'])
+        self._scanEvent.set()
 
     # 激活设备通知成功回调函数
     def onWriteResponse(self, connHandle, cccdHandle, status):

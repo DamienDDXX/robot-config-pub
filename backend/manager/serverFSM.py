@@ -197,9 +197,9 @@ class serverFSM(object):
                         self._buttonAPI.setImxCallback(self._mp3FSM.cbButtonImx)
                 self.putEvent('evtLoginOk', self.evtLoginOk)
         finally:
+            logging.debug('serverFSM.loginThread() fini.')
             self._loginThread = None
             self._loginDoneEvent.set()
-            logging.debug('serverFSM.loginThread() fini.')
 
     # 启动登录
     def loginInit(self):
@@ -276,9 +276,9 @@ class serverFSM(object):
             elif e.message == 'abort':
                 self.putEvent('evtFailed', self.evtFailed)
         finally:
+            logging.debug('serverFSM.configThread() fini.')
             self._configThread = None
             self._configDoneEvent.set()
-            logging.debug('serverFSM.configThread() fini.')
 
     # 开始配置
     def configInit(self):
@@ -331,9 +331,9 @@ class serverFSM(object):
             elif e.message == 'fail':
                 self.putEvent('evtFailed', self.evtFailed)
         finally:
+            logging.debug('serverFSM.heartbeatThread() fini.')
             self._heartbeatThread = None
             self._heartbeatDoneEvent.set()
-            logging.debug('serverFSM.heartbeatThread() fini.')
 
     # 启动心跳同步
     def heatbeatInit(self):
@@ -371,9 +371,9 @@ class serverFSM(object):
             self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]
+            logging.debug('serverFSM.fsmThread() fini.')
             self._fsmThread = None
             self._fsmDoneEvent.set()
-            logging.debug('serverFSM.fsmThread() fini.')
 
     # 终止系统服务器状态机
     def fini(self):

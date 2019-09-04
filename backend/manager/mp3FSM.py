@@ -138,9 +138,9 @@ class mp3FSM(object):
             self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]
+            logging.debug('mp3FSM.fsmThread() fini.')
             self._fsmThread = None
             self._fsmDoneEvent.set()
-            logging.debug('mp3FSM.fsmThread() fini.')
 
     # 更新本地音频文件
     def updateFileLocal(self):
@@ -261,9 +261,9 @@ class mp3FSM(object):
         except:
             traceback.print_exc()
         finally:
+            logging.debug('mp3FSM.updateThread() fini.')
             self._updateThread = None
             self._updateDoneEvent.set()
-            logging.debug('mp3FSM.updateThread() fini.')
 
     # 清除所有广播文件
     def clearRadio(self):
@@ -337,9 +337,9 @@ class mp3FSM(object):
             if self._sound:
                 mixer.quit()
                 self._sound = None
+            logging.debug('mp3FSM.playThread() fini.')
             self._playThread = None
             self._playDoneEvent.set()
-            logging.debug('mp3FSM.playThread() fini.')
 
     # 终止播放
     def playFini(self, quit = False):

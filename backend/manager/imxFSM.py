@@ -219,8 +219,8 @@ class imxFSM(object):
         if not self._timerFiniEvent.isSet() and event:
             self.putEvent(desc, event)
         self._timerThread = None
-        self._timerDoneEvent.set()
         logging.debug('imxFSM.timerThread(%d, %s) fini.' %(timeout, desc))
+        self._timerDoneEvent.set()
 
     # 启动定时器
     def timerInit(self, timeout, desc, event):
@@ -465,11 +465,11 @@ class imxFSM(object):
             self._eventQueue.queue.clear()
             self._eventQueue = None
             del self._eventList[:]
-            self._fsmThread = None
-            self._fsmDoneEvent.set()
             self._imxAPI.logout()
             self._imxAPI.fini()
             logging.debug('imxFSM.fsmThread(). fini')
+            self._fsmThread = None
+            self._fsmDoneEvent.set()
 
 
 ################################################################################
