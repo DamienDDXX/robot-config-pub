@@ -2,6 +2,7 @@
 # -*- coding: utf8 -*-
 
 from data_access import confmgr
+from utility import updateWifi
 from manager.wifiAPI import wifiAPI
 
 _wifi = None
@@ -27,6 +28,7 @@ def update_wifi_info(w_info):
     else:
         wifi_info['password'] = ''
     confmgr.update_conf(conf)
+    updateWifi.updateWifi(w_info['name'], w_info['password'], '5')
     return True, 'updated'
 
 
