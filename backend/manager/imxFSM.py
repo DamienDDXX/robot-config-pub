@@ -40,7 +40,7 @@ class imxFSM(object):
         self._doctor = None
         self._doctorList = []
         self._orderList = [ ROLE_VD, ROLE_PHD, ROLE_NURSE, ROLE_GP, ROLE_SERVER ]
-        self._autoMode = False
+        self._autoMode = True
 
         self._cbExitIdle = None
         self._cbEntryIdle = None
