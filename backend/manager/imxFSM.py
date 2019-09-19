@@ -384,17 +384,17 @@ class imxFSM(object):
     # 呼叫事件回调函数 - 未知错误
     def cbCallEventUnknown(self):
         logging.debug('imxFSM.cbCallEventUnknown().')
-        self.callSoundFini('evtRelease', self.evtRelease)   # 关闭 <嘟嘟> 音效
+        self.callSoundFini('evtRelease', self.evtRelease)       # 关闭 <嘟嘟> 音效
 
     # 呼叫事件回调函数 - 正在外呼
     def cbCallEventCalling(self):
         logging.debug('imxFSM.cbCallEventCalling().')
-        self.callSoundInit(None, None)                      # 启动 <嘟嘟> 音效
+        self.callSoundInit(None, None)                          # 启动 <嘟嘟> 音效
 
     # 呼叫事件回调函数 - 正在呼入
     def cbCallEventIncoming(self):
         logging.debug('imxFSM.cbCallEventIncoming().')
-        self.callSoundInit(None, None)                      # 启动 <嘟嘟> 音效
+        self.callSoundInit('evtIncomming', self.evtIncomming)   # 启动 <嘟嘟> 音效
 
     # 呼叫事件回调函数 - 正在处理
     def cbCallEventProceeding(self):
