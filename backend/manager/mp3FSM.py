@@ -45,7 +45,7 @@ class mp3FSM(object):
     def __init__(self, hostName, portNumber, token, getMp3List, volume = 0.5, mp3Dir = MP3_DIR_):
         if platform.system().lower() == 'linux':
             # 挂载虚拟盘
-            os.system('sudo mount -t tmpfs -o size=100m,mode=0777 tmpfs /ram')
+            os.system('sudo mount -t tmpfs -o size=300m,mode=0777 tmpfs /ram')
 
         self._hostName = hostName
         self._portNumber = portNumber
