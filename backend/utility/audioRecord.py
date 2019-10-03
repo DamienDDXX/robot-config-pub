@@ -100,7 +100,7 @@ def audioPlayLoop(wavFile):
         audioPlay(wavFile)
 
 # 播放启动音效
-def soundStartup():
+def soundStartup(wait):
     if platform.system().lower() == 'windows':
         sound = os.path.join(base_dir, '..\static\mp3\\startup.wav')
     elif platform.system().lower() == 'linux':
@@ -112,11 +112,14 @@ def soundStartup():
         p = Process(target = audioPlay, args = (sound, ))
         p.daemon = True
         p.start()
+        if wait:
+            while p.is_alive():
+                time.sleep(0.1)
         return p
     return None
 
 # 播放连接成功音效
-def soundConnected():
+def soundConnected(wait):
     if platform.system().lower() == 'windows':
         sound = os.path.join(base_dir, '..\static\mp3\\connected.wav')
     elif platform.system().lower() == 'linux':
@@ -128,11 +131,14 @@ def soundConnected():
         p = Process(target = audioPlay, args = (sound, ))
         p.daemon = True
         p.start()
+        if wait:
+            while p.is_alive():
+                time.sleep(0.1)
         return p
     return None
 
 # 播放掉线音效
-def soundOffline():
+def soundOffline(wait):
     if platform.system().lower() == 'windows':
         sound = os.path.join(base_dir, '..\static\mp3\\offline.wav')
     elif platform.system().lower() == 'linux':
@@ -144,11 +150,14 @@ def soundOffline():
         p = Process(target = audioPlay, args = (sound, ))
         p.daemon = True
         p.start()
+        if wait:
+            while p.is_alive():
+                time.sleep(0.1)
         return p
     return None
 
 # 播放异常音效
-def soundException():
+def soundException(wait):
     if platform.system().lower() == 'windows':
         sound = os.path.join(base_dir, '..\static\mp3\\exception.wav')
     elif platform.system().lower() == 'linux':
@@ -160,6 +169,9 @@ def soundException():
         p = Process(target = audioPlay, args = (sound, ))
         p.daemon = True
         p.start()
+        if wait:
+            while p.is_alive():
+                time.sleep(0.1)
         return p
     return None
 

@@ -13,7 +13,7 @@ if __name__ == '__main__':
     import sys
     sys.path.append('..')
 
-from utility import setLogging
+from utility import setLogging, audioRecord
 
 from manager.mp3FSM import mp3FSM
 from manager.serverAPI import serverAPI
@@ -186,6 +186,7 @@ class serverFSM(object):
         except Exception, e:
             if e.message == 'login':
                 # 登录成功
+                audioRecord.soundConnected(wait = True)
                 if not self._mp3FSM:
                     # 创建音频管理状态机
                     self._mp3FSM = mp3FSM(hostName = self._hostName, portNumber = self._portNumber, token = self._token, getMp3List = self._serverAPI.getMp3List)
@@ -274,6 +275,7 @@ class serverFSM(object):
                 self._confUpdated = True     # 配置更新成功
                 self.putEvent('evtConfigOk', self.evtConfigOk)
             elif e.message == 'abort':
+                audioRecord.soundOffline(wait = True)
                 self.putEvent('evtFailed', self.evtFailed)
         finally:
             logging.debug('serverFSM.configThread() fini.')
@@ -329,6 +331,7 @@ class serverFSM(object):
             if e.message == 'ok':
                 self.putEvent('evtHeartbeat', self.evtHeartbeat)
             elif e.message == 'fail':
+                audioRecord.soundOffline(wait = True)
                 self.putEvent('evtFailed', self.evtFailed)
         finally:
             logging.debug('serverFSM.heartbeatThread() fini.')
