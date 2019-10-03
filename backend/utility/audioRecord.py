@@ -110,6 +110,7 @@ def soundStartup():
 
     if sound and os.path.isfile(sound):
         p = Process(target = audioPlay, args = (sound, ))
+        p.daemon = True
         p.start()
         return p
     return None
@@ -125,6 +126,7 @@ def soundConnected():
 
     if sound and os.path.isfile(sound):
         p = Process(target = audioPlay, args = (sound, ))
+        p.daemon = True
         p.start()
         return p
     return None
@@ -140,6 +142,7 @@ def soundOffline():
 
     if sound and os.path.isfile(sound):
         p = Process(target = audioPlay, args = (sound, ))
+        p.daemon = True
         p.start()
         return p
     return None
@@ -155,6 +158,7 @@ def soundException():
 
     if sound and os.path.isfile(sound):
         p = Process(target = audioPlay, args = (sound, ))
+        p.daemon = True
         p.start()
         return p
     return None
@@ -170,6 +174,7 @@ def soundDudu():
 
     if sound and os.path.isfile(sound):
         p = Process(target = audioPlayLoop, args = (sound, ))
+        p.daemon = True
         p.start()
         return p
     return None
@@ -180,7 +185,4 @@ def soundDudu():
 if __name__ == '__main__':
     p = soundDudu()
     if p:
-        time.sleep(20)
-        if p.is_alive():
-            print('terminate')
-            p.terminate()
+        time.sleep(10)
