@@ -27,7 +27,7 @@ class wifiAPI(object):
         if platform.system().lower() == 'windows':
             self._iface = pywifi.PyWiFi().interfaces()[0]
         elif platform.system().lower() == 'linux':
-            self._iface = pywifi.PyWiFi().interfaces()[1]
+            self._iface = pywifi.PyWiFi().interfaces()[0]
         else:
             self._iface = None
         self._profile = None
