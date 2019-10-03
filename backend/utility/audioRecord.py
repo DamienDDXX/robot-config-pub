@@ -104,7 +104,7 @@ def soundStartup():
     if platform.system().lower() == 'windows':
         sound = os.path.join(base_dir, '..\static\mp3\\startup.wav')
     elif platform.system().lower() == 'linux':
-        sound = os.path.join(base_dir, '..\static\mp3\startup.wav')
+        sound = os.path.join(base_dir, '../static/mp3/startup.wav')
     else:
         sound = None
 
@@ -119,7 +119,7 @@ def soundConnected():
     if platform.system().lower() == 'windows':
         sound = os.path.join(base_dir, '..\static\mp3\\connected.wav')
     elif platform.system().lower() == 'linux':
-        sound = os.path.join(base_dir, '..\static\mp3\connected.wav')
+        sound = os.path.join(base_dir, '../static/mp3/connected.wav')
     else:
         sound = None
 
@@ -134,7 +134,7 @@ def soundOffline():
     if platform.system().lower() == 'windows':
         sound = os.path.join(base_dir, '..\static\mp3\\offline.wav')
     elif platform.system().lower() == 'linux':
-        sound = os.path.join(base_dir, '..\static\mp3\offline.wav')
+        sound = os.path.join(base_dir, '../static/mp3/offline.wav')
     else:
         sound = None
 
@@ -149,7 +149,7 @@ def soundException():
     if platform.system().lower() == 'windows':
         sound = os.path.join(base_dir, '..\static\mp3\\exception.wav')
     elif platform.system().lower() == 'linux':
-        sound = os.path.join(base_dir, '..\static\mp3\exception.wav')
+        sound = os.path.join(base_dir, '../static/mp3/exception.wav')
     else:
         sound = None
 
@@ -164,7 +164,7 @@ def soundDudu():
     if platform.system().lower() == 'windows':
         sound = os.path.join(base_dir, '..\static\mp3\\dudu.wav')
     elif platform.system().lower() == 'linux':
-        sound = os.path.join(base_dir, '..\static\mp3\dudu.wav')
+        sound = os.path.join(base_dir, '../static/mp3/dudu.wav')
     else:
         sound = None
 
