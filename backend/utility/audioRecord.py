@@ -1,8 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 
+import time
 import pyaudio, wave
 import os, sys, platform
+from multiprocessing import Process
 
 __all__ = [
         'audioRecord',
@@ -14,6 +16,7 @@ CHANNELS = 1
 RATE = 16000
 RECORD_SECONDS = 5
 
+base_dir = os.path.dirname(os.path.abspath(__file__))
 
 # 录音
 def audioRecord(wavFile, seconds):
@@ -91,22 +94,93 @@ def audioPlay(wavFile):
     else:
         pass
 
+# 循环播放音频
+def audioPlayLoop(wavFile):
+    while True:
+        audioPlay(wavFile)
 
+# 播放启动音效
+def soundStartup():
+    if platform.system().lower() == 'windows':
+        sound = os.path.join(base_dir, '..\static\mp3\\startup.wav')
+    elif platform.system().lower() == 'linux':
+        sound = os.path.join(base_dir, '..\static\mp3\startup.wav')
+    else:
+        sound = None
+
+    if sound and os.path.isfile(sound):
+        p = Process(target = audioPlay, args = (sound, ))
+        p.start()
+        return p
+    return None
+
+# 播放连接成功音效
+def soundConnected():
+    if platform.system().lower() == 'windows':
+        sound = os.path.join(base_dir, '..\static\mp3\\connected.wav')
+    elif platform.system().lower() == 'linux':
+        sound = os.path.join(base_dir, '..\static\mp3\connected.wav')
+    else:
+        sound = None
+
+    if sound and os.path.isfile(sound):
+        p = Process(target = audioPlay, args = (sound, ))
+        p.start()
+        return p
+    return None
+
+# 播放掉线音效
+def soundOffline():
+    if platform.system().lower() == 'windows':
+        sound = os.path.join(base_dir, '..\static\mp3\\offline.wav')
+    elif platform.system().lower() == 'linux':
+        sound = os.path.join(base_dir, '..\static\mp3\offline.wav')
+    else:
+        sound = None
+
+    if sound and os.path.isfile(sound):
+        p = Process(target = audioPlay, args = (sound, ))
+        p.start()
+        return p
+    return None
+
+# 播放异常音效
+def soundException():
+    if platform.system().lower() == 'windows':
+        sound = os.path.join(base_dir, '..\static\mp3\\exception.wav')
+    elif platform.system().lower() == 'linux':
+        sound = os.path.join(base_dir, '..\static\mp3\exception.wav')
+    else:
+        sound = None
+
+    if sound and os.path.isfile(sound):
+        p = Process(target = audioPlay, args = (sound, ))
+        p.start()
+        return p
+    return None
+
+# 播放电话呼叫音效
+def soundDudu():
+    if platform.system().lower() == 'windows':
+        sound = os.path.join(base_dir, '..\static\mp3\\dudu.wav')
+    elif platform.system().lower() == 'linux':
+        sound = os.path.join(base_dir, '..\static\mp3\dudu.wav')
+    else:
+        sound = None
+
+    if sound and os.path.isfile(sound):
+        p = Process(target = audioPlayLoop, args = (sound, ))
+        p.start()
+        return p
+    return None
+
+
+################################################################################
+# 测试程序
 if __name__ == '__main__':
-    wavFile = '/home/pi/robot-config/backend/static/mp3/bird.wav'
-    audioPlay(wavFile)
-    """
-    wavFile = 'test.wav'
-    if os.path.isfile(wavFile):
-        try:
-            os.remove(wavFile)
-        except:
-            pass
-    audioRecord(wavFile, 5)
-    audioPlay(wavFile)
-    if os.path.isfile(wavFile):
-        try:
-            os.remove(wavFile)
-        except:
-            pass
-    """
+    p = soundDudu()
+    if p:
+        time.sleep(20)
+        if p.is_alive():
+            print('terminate')
+            p.terminate()
