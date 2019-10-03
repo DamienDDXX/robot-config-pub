@@ -13,7 +13,8 @@ if __name__ == '__main__':
     from manager.buttonAPI import buttonAPI
 from transitions import Machine, State
 from manager.imxAPI import imxAPI
-from utility import setLogging
+from utility import setLogging, audioRecord
+from multiprocessing import Process
 
 
 __all__ = [
@@ -42,9 +43,10 @@ class imxFSM(object):
         self._orderList = [ ROLE_VD, ROLE_PHD, ROLE_NURSE, ROLE_GP, ROLE_SERVER ]
         self._autoMode = True
 
+        self._soundProcess = None
+
         self._cbExitIdle = None
         self._cbEntryIdle = None
-        self._cbCallSound = None
 
         self._imxAPI = imxAPI(server = self._server, port = self._port, personId = self._personId)
         self._imxAPI.setCallEventUnknown(self.cbCallEventUnknown)
@@ -266,11 +268,6 @@ class imxFSM(object):
         else:
             self.timerInit(timeout = 30, desc = 'evtLogin', event = self.evtLogin)
 
-    # 设置呼叫音效回调函数
-    def setCallSoundCallback(self, cb):
-        self._cbCallSound, cb = cb, self._cbCallSound
-        return cb
-
     # 设置进入空闲状态动作回调函数
     def setEntryIdleCallback(self, cb):
         self._cbEntryIdle, cb = cb, self._cbEntryIdle
@@ -368,16 +365,17 @@ class imxFSM(object):
     # 关闭音效
     def callSoundFini(self, desc, event):
         logging.debug('imxFSM.callSoundFini().')
-        if self._cbCallSound:
-            self._cbCallSound(False)
+        if self._soundProcess and self._soundProcess.is_alive():
+            self._soundProcess.terminate()
+            self._soundProcess = None
         if event:
             self.putEvent(desc, event)
 
     # 开启音效
     def callSoundInit(self, desc, event):
         logging.debug('imxFSM.callSoundInit().')
-        if self._cbCallSound:
-            self._cbCallSound(True)
+        if not self._soundProcess:
+            self._soundProcess = audioRecord.soundDudu()
         if event:
             self.putEvent(desc, event)
 
