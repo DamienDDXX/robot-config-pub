@@ -205,12 +205,12 @@ class serverAPI(object):
             return ret, doctorList
 
     # 保存呼叫记录
-    def callLog(self, doctorId, callSts, tmStr, tmEnd = None):
+    def saveCallLog(self, doctorId, callSts, tmStr, tmEnd = None):
         ret = False
         logging.debug('serverAPI.saveCallLog() start ...')
         try:
             callLogUrl = self._hostName + ':' + self._portNumber + CALL_LOG_URL_POSTFIX
-            logging.debug('callLog: url - %s, token - %s' %(callLogUrl, self._token))
+            logging.debug('saveCallLog: url - %s, token - %s' %(callLogUrl, self._token))
             headers = {
                     'Content-Type': 'application/json;charset=UTF-8',
                     'access_token': self._token
@@ -225,7 +225,7 @@ class serverAPI(object):
             logging.debug(json.dumps(payload, indent = 4, ensure_ascii = False))
 
             rsp = requests.post(callLogUrl, headers = headers, data = json.dumps(payload), verify = False)
-            logging.debug('callLog: rsp.status_code - %d', rsp.status_code)
+            logging.debug('saveCallLog: rsp.status_code - %d', rsp.status_code)
             if rsp.status_code == 200:
                 js = rsp.json()
                 logging.debug(json.dumps(js, indent = 4, ensure_ascii = False))
@@ -234,7 +234,7 @@ class serverAPI(object):
         except:
             traceback.print_exc()
         finally:
-            logging.debug('serverAPI.callLog() %s.' %('success' if ret else 'failed'))
+            logging.debug('serverAPI.saveCallLog() %s.' %('success' if ret else 'failed'))
             return ret
 
     # 心跳同步
@@ -325,5 +325,5 @@ if __name__ == '__main__':
         tmStr = time.time()
         time.sleep(5)
         tmEnd = time.time()
-        api.callLog(doctorId = 'jove', callSts = True, tmStr = tmStr, tmEnd = tmEnd)
+        api.saveCallLog(doctorId = 'jove', callSts = True, tmStr = tmStr, tmEnd = tmEnd)
 

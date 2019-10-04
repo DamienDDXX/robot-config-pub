@@ -32,16 +32,20 @@ ROLE_SERVER = 15    # 在线服务员
 # 视频状态机类
 class imxFSM(object):
     # 初始化
-    def __init__(self, server, port, personId, getDoctorList):
+    def __init__(self, server, port, personId, getDoctorList, saveCallLog):
         logging.debug('imxFSM.__init__(%s, %s, %s)' %(server, port, personId))
         self._server = server
         self._port = port
         self._personId = personId
         self._getDoctorList = getDoctorList
+        self._saveCallLog = saveCallLog
         self._doctor = None
         self._doctorList = []
         self._orderList = [ ROLE_VD, ROLE_PHD, ROLE_NURSE, ROLE_GP, ROLE_SERVER ]
-        self._autoMode = True
+        self._autoMode = False
+
+        self._tmStr = None
+        self._doctorId = None
 
         self._soundProcess = None
 
@@ -325,8 +329,12 @@ class imxFSM(object):
             traceback.print_exc()
         finally:
             if self._doctor:
-                self._imxAPI.call(str(self._doctor['id']))
+                self._tmStr = time.time()
+                self._doctorId = str(self._doctor['id'])
+                self._imxAPI.call(self._doctorId)
             else:
+                self._tmStr = None
+                self._doctorId = None
                 self.putEvent('evtNoAnswer', self.evtNoAnswer)
 
     # 等待接听
@@ -379,10 +387,20 @@ class imxFSM(object):
         if event:
             self.putEvent(desc, event)
 
+    # 保存呼叫记录
+    def saveCallLog(self, callSts = False):
+        logging.debug('imxFSM.saveCallLog().')
+        if self._saveCallLog and self._doctorId and self._tmStr:
+            tmEnd = time.time() if callSts else None
+            self._saveCallLog(doctorId = self._doctorId, callSts = callSts, tmStr = self._tmStr, tmEnd = tmEnd)
+            self._tmStr = None
+            self._doctorId = None
+
     # 呼叫事件回调函数 - 未知错误
     def cbCallEventUnknown(self):
         logging.debug('imxFSM.cbCallEventUnknown().')
         self.callSoundFini('evtRelease', self.evtRelease)       # 关闭 <嘟嘟> 音效
+        self.saveCallLog(callSts = False)                       # 保存呼叫记录（失败）
 
     # 呼叫事件回调函数 - 正在外呼
     def cbCallEventCalling(self):
@@ -401,48 +419,56 @@ class imxFSM(object):
     # 呼叫事件回调函数 - 接听
     def cbCallEventAccept(self):
         logging.debug('imxFSM.cbCallEventAccept().')
-        self.callSoundFini('evtAccept', self.evtAccept)     # 关闭 <嘟嘟> 音效
+        self.callSoundFini('evtAccept', self.evtAccept)         # 关闭 <嘟嘟> 音效
         self._imxAPI.activeMedia()
 
     # 呼叫事件回调函数 - 拒接
     def cbCallEventDecline(self):
         logging.debug('imxFSM.cbCallEventDecline().')
-        self.callSoundFini('evtRelease', self.evtRelease)   # 关闭 <嘟嘟> 音效
+        self.callSoundFini('evtRelease', self.evtRelease)       # 关闭 <嘟嘟> 音效
+        self.saveCallLog(callSts = False)                       # 保存呼叫记录（失败）
 
     # 呼叫事件回调函数 - 远端忙
     def cbCallEventBusy(self):
         logging.debug('imxFSM.cbCallEventBusy().')
-        self.callSoundFini('evtRelease', self.evtRelease)   # 关闭 <嘟嘟> 音效
+        self.callSoundFini('evtRelease', self.evtRelease)       # 关闭 <嘟嘟> 音效
+        self.saveCallLog(callSts = False)                       # 保存呼叫记录（失败）
 
     # 呼叫事件回调函数 - 不可达
     def cbCallEventUnreachable(self):
         logging.debug('imxFSM.cbCallEventUnreachable().')
-        self.callSoundFini('evtRelease', self.evtRelease)   # 关闭 <嘟嘟> 音效
+        self.callSoundFini('evtRelease', self.evtRelease)       # 关闭 <嘟嘟> 音效
+        self.saveCallLog(callSts = False)                       # 保存呼叫记录（失败）
 
     # 呼叫事件回调函数 - 离线
     def cbCallEventOffline(self):
         logging.debug('imxFSM.cbCallEventOffline().')
-        self.callSoundFini('evtRelease', self.evtRelease)   # 关闭 <嘟嘟> 音效
+        self.callSoundFini('evtRelease', self.evtRelease)       # 关闭 <嘟嘟> 音效
+        self.saveCallLog(callSts = False)                       # 保存呼叫记录（失败）
 
     # 呼叫事件回调函数 - 对方挂断
     def cbCallEventHangup(self):
         logging.debug('imxFSM.cbCallEventHangup().')
-        self.callSoundFini('evtRelease', self.evtRelease)   # 关闭 <嘟嘟> 音效
+        self.callSoundFini('evtRelease', self.evtRelease)       # 关闭 <嘟嘟> 音效
+        self.saveCallLog(callSts = True)                        # 保存呼叫记录（成功）
 
     # 呼叫事件回调函数 - 释放
     def cbCallEventRelease(self):
         logging.debug('imxFSM.cbCallEventRelease().')
-        self.callSoundFini('evtRelease', self.evtRelease)   # 关闭 <嘟嘟> 音效
+        self.callSoundFini('evtRelease', self.evtRelease)       # 关闭 <嘟嘟> 音效
+        self.saveCallLog(callSts = True)                        # 保存呼叫记录（成功）
 
     # 呼叫事件回调函数 - 超时无人接听
     def cbCallEventTimeout(self):
         logging.debug('imxFSM.cbCallEventTimeout().')
-        self.callSoundFini('evtRelease', self.evtRelease)   # 关闭 <嘟嘟> 音效
+        self.callSoundFini('evtRelease', self.evtRelease)       # 关闭 <嘟嘟> 音效
+        self.saveCallLog(callSts = False)                       # 保存呼叫记录（失败）
 
     # 呼叫事件回调函数 - 某些错误
     def cbCallEventSomeerror(self):
         logging.debug('imxFSM.cbCallEventSomeerror().')
-        self.callSoundFini('evtRelease', self.evtRelease)   # 关闭 <嘟嘟> 音效
+        self.callSoundFini('evtRelease', self.evtRelease)       # 关闭 <嘟嘟> 音效
+        self.saveCallLog(callSts = False)                       # 保存呼叫记录（失败）
 
     # 视频状态机后台线程
     def fsmThread(self):
@@ -481,7 +507,7 @@ if __name__ == '__main__':
             ret, vsvrIp, vsvrPort, personList = server.getConfig()
             if ret and len(personList) > 0:
                 personId = personList[0]['personId']
-                imx = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId, getDoctorList = server.getDoctorList)
+                imx = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId, getDoctorList = server.getDoctorList, saveCallLog = server.saveCallLog)
                 button = buttonAPI()
                 button.setCallCallback(imx.cbButtonCall)
                 button.setMuteCallback(imx.cbButtonMute)

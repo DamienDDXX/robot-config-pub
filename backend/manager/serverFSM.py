@@ -261,7 +261,7 @@ class serverFSM(object):
                     # 配置视频服务器
                     personId = personList[0]['personId']
                     if not self._imxFSM:
-                        self._imxFSM = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId, getDoctorList = self._serverAPI.getDoctorList)
+                        self._imxFSM = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId, getDoctorList = self._serverAPI.getDoctorList, saveCallLog = self._serverAPI.saveCallLog)
                         self._imxFSM.setExitIdleCallback(self.cbEntryImxMode)
                         self._imxFSM.setEntryIdleCallback(self.cbExitImxMode)
                         self._imxFSM.setCallSoundCallback(self.cbCallSound)
