@@ -49,6 +49,7 @@ class serverFSM(object):
 
         self._confVer = None
         self._playVer = None
+        self._softVer = 1.01
         self._confUpdated = False
         self._playUpdated = False
 
@@ -308,8 +309,8 @@ class serverFSM(object):
             if self._heartbeatFiniEvent.isSet():
                 raise Exception('fini')
             for retry in range(0, 6):
-                ret, playVer, confVer = self._serverAPI.heatbeat(playVer = self._playVer if self._playUpdated else None,
-                                                                 confVer = self._confVer if self._confUpdated else None)
+                ret, playVer, confVer, softVer = self._serverAPI.heatbeat(playVer = self._playVer if self._playUpdated else None,
+                                                                          confVer = self._confVer if self._confUpdated else None)
                 if ret:
                     if playVer and playVer != self._playVer:
                         self._playVer = playVer
@@ -319,6 +320,10 @@ class serverFSM(object):
                         self._confVer = confVer
                         self._confUpdated = False
                         self.putEvent('evtConfig', self.evtConfig)   # 重新更新配置
+                    if softVer and softVer != self._softVer:
+                        # TODO:
+                        #   启动更新机器人固件操作
+                        pass
                     raise Exception('ok')
                 logging.debug('heartbeat failed.')
                 logging.debug('retry to heatbeat in 30s.')

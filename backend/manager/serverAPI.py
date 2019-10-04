@@ -203,8 +203,8 @@ class serverAPI(object):
             return ret, doctorList
 
     # 心跳同步
-    def heatbeat(self, playVer = None, cbUpdatePlay = None, confVer = None, cbUpdateConf = None):
-        ret, playUpdate, confUpdate = False, None, None
+    def heatbeat(self, playVer = None, confVer = None):
+        ret, playUpdate, confUpdate, softUpdate = False, None, None, None
         logging.debug('serverAPI.heartbeat() start ...')
         try:
             heatbeatUrl = self._hostName + ':' + self._portNumber + HEATBEAT_URL_POSTFIX
@@ -241,23 +241,23 @@ class serverAPI(object):
                     if 'confVer' in js['data']:
                         logging.debug('heatbeat: conf version updated - %d.', js['data']['confVer'])
                         confUpdate = js['data']['confVer']
-                        # 调用配置更新回调函数
-                        if cbUpdateConf:
-                            cbUpdateConf(confUpdate)
 
                     # 检查音频列表是否有更新
                     if 'playVer' in js['data']:
                         logging.debug('heatbeat: play version updated - %d.', js['data']['playVer'])
                         playUpdate = js['data']['playVer']
-                        # 调用音频更新回调函数
-                        if cbUpdatePlay:
-                            cbUpdatePlay(playUpdate)
+
+                    # 检查机器人固件版本号
+                    if 'ver' in js['data']:
+                        logging.debug('heatbeat: soft version updated - %d.', js['data']['ver'])
+                        softUpdate = js['data']['ver']
+
                     ret = True
         except:
             traceback.print_exc()
         finally:
             logging.debug('serverAPI.heartbeat() %s.' %('success' if ret else 'failed'))
-            return ret, playUpdate, confUpdate
+            return ret, playUpdate, confUpdate, softUpdate
 
 
 ################################################################################
@@ -282,6 +282,6 @@ if __name__ == '__main__':
             print(mp3List)
 
         # 测试心跳同步
-        ret, playUpdate, confUpdate = api.heatbeat()
+        ret, playUpdate, confUpdate, softUpdate = api.heatbeat()
         if ret:
-            print(playUpdate, confUpdate)
+            print(playUpdate, confUpdate, softUpdate)
