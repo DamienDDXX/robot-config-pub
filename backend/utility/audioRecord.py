@@ -96,8 +96,31 @@ def audioPlay(wavFile):
 
 # 循环播放音频
 def audioPlayLoop(wavFile):
-    while True:
-        audioPlay(wavFile)
+    wf = None
+    p = None
+    stream = None
+    try:
+        wf = wave.open(wavFile, 'rb')
+        p = pyaudio.PyAudio()
+        while True:
+            stream = p.open(format = p.get_format_from_width(wf.getsampwidth()),
+                            channels = wf.getnchannels(),
+                            rate=wf.getframerate(),
+                            output = True)
+            data = wf.readframes(CHUNK)
+            while data != '':
+                stream.write(data)
+                data = wf.readframes(CHUNK)
+            stream.stop_stream()
+            stream.close()
+    finally:
+        if stream:
+            stream.stop_stream()
+            stream.close()
+        if p:
+            p.terminate()
+        if wf:
+            wf.close()
 
 # 播放启动音效
 def soundStartup(wait):
@@ -197,4 +220,8 @@ def soundDudu():
 if __name__ == '__main__':
     p = soundDudu()
     if p:
+        print(p)
         time.sleep(10)
+        print("terminate")
+        p.terminate()
+        time.sleep(5)
