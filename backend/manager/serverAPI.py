@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 
+import time
 import json
 import requests
 import logging
@@ -23,6 +24,7 @@ CONFIG_URL_POSTFIX      = '/medical/robot/findMyConfig'     # 机器人配置信
 HEATBEAT_URL_POSTFIX    = '/medical/robot/heartbeat'        # 机器人心跳地址后缀
 MP3_LIST_URL_POSTFIX    = '/medical/robot/listMp3'          # 音频列表地址后缀
 DOCTOR_LIST_URL_POSTFIX = '/medical/robot/listOnlineDoctor' # 在线医生列表地址
+CALL_LOG_URL_POSTFIX    = '/medical/robot/saveCallLog'      # 保存呼叫记录
 
 # 服务器接口类
 class serverAPI(object):
@@ -202,6 +204,39 @@ class serverAPI(object):
             logging.debug('serverAPI.getDoctorList() %s.' %('success' if ret else 'failed'))
             return ret, doctorList
 
+    # 保存呼叫记录
+    def callLog(self, doctorId, callSts, tmStr, tmEnd = None):
+        ret = False
+        logging.debug('serverAPI.saveCallLog() start ...')
+        try:
+            callLogUrl = self._hostName + ':' + self._portNumber + CALL_LOG_URL_POSTFIX
+            logging.debug('callLog: url - %s, token - %s' %(callLogUrl, self._token))
+            headers = {
+                    'Content-Type': 'application/json;charset=UTF-8',
+                    'access_token': self._token
+                    }
+            payload = { 'callType': 0,
+                        'personId': self._rbtId,
+                        'doctorId': doctorId,
+                        'callSts':  1 if callSts else 0,
+                        'tmStr':    time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(tmStr)) }
+            if tmEnd:
+                payload['tmEnd'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(tmEnd))
+            logging.debug(json.dumps(payload, indent = 4, ensure_ascii = False))
+
+            rsp = requests.post(callLogUrl, headers = headers, data = json.dumps(payload), verify = False)
+            logging.debug('callLog: rsp.status_code - %d', rsp.status_code)
+            if rsp.status_code == 200:
+                js = rsp.json()
+                logging.debug(json.dumps(js, indent = 4, ensure_ascii = False))
+                if 'code' in js and js['code'] == 0:
+                    ret = True
+        except:
+            traceback.print_exc()
+        finally:
+            logging.debug('serverAPI.callLog() %s.' %('success' if ret else 'failed'))
+            return ret
+
     # 心跳同步
     def heatbeat(self, playVer = None, confVer = None):
         ret, playUpdate, confUpdate, softUpdate = False, None, None, None
@@ -285,3 +320,10 @@ if __name__ == '__main__':
         ret, playUpdate, confUpdate, softUpdate = api.heatbeat()
         if ret:
             print(playUpdate, confUpdate, softUpdate)
+
+        # 测试保存呼叫记录
+        tmStr = time.time()
+        time.sleep(5)
+        tmEnd = time.time()
+        api.callLog(doctorId = 'jove', callSts = True, tmStr = tmStr, tmEnd = tmEnd)
+
