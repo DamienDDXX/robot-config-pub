@@ -219,12 +219,20 @@ class mp3FSM(object):
                                 rsp = requests.get(fileUrl, headers = headers, stream = True, verify = False)
                                 logging.debug('download mp3 file: rsp.status_code - %d', rsp.status_code)
                                 if rsp.status_code == 200:
+                                    chunks = 0
                                     with open(filePath, 'wb') as mp3File:
                                         for chunk in rsp.iter_content(chunk_size = 1024):
                                             if chunk:
                                                 if self._updateFiniEvent.isSet():
                                                     raise Exception('fini')
+                                                chunks += 1
                                                 mp3File.write(chunk)
+                                    if chunks == 0:
+                                        logging.debug('download mp3 file filed: url - %s, size = 0' %fileUrl)
+                                        time.sleep(1)
+                                        if os.path.isfile(filePath):
+                                            os.remove(filePath)
+                                        continue
                                     logging.debug('download mp3 file done: url - %s' %fileUrl)
                             self._fileList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': str(mp3['pri']) })
                             newList.append({ 'fileId': fileId, 'filePath': filePath, 'pri': str(mp3['pri']) })
