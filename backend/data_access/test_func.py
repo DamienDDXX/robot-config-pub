@@ -2,6 +2,7 @@
 # -*- coding: utf8 -*-
 
 import os
+import time
 import random
 import platform
 
