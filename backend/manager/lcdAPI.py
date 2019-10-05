@@ -24,19 +24,35 @@ LCD_CMD_PAGE_SMILE  = 0x19
 class lcdAPI(object):
     # 初始化
     def __init__(self):
+        self._backlit = True
         self._bus = smbus.SMBus(1)
 
     def command(self, cmd):
         try:
             self._bus.write_byte(cmd, 0x00)
-            time.sleep(0.06)
+            time.sleep(0.1)
         except IOError:
             pass
 
+    # 切换背光开关
+    def backlit_switch(self):
+        if self._backlit:
+            self.backlit_off()
+        else:
+            self.backlit_on()
+
+    def notify_alive(self):
+        if self._backlit:
+            self.backlit_on()
+        else:
+            self.backlit_off()
+
     def backlit_off(self):
+        self._backlit = False
         self.command(LCD_CMD_BACKLIT_OFF)
 
     def backlit_on(self):
+        self._backlit = True
         self.command(LCD_CMD_BACKLIT_ON)
 
     def page_logo(self):

@@ -16,6 +16,7 @@ if __name__ == '__main__':
 from utility import setLogging, audioRecord
 
 from manager.mp3FSM import mp3FSM
+from manager.lcdAPI import lcdAPI
 from manager.serverAPI import serverAPI
 from manager.buttonAPI import buttonAPI
 if platform.system().lower() == 'linux':
@@ -68,7 +69,9 @@ class serverFSM(object):
         self._mp3FSM = None
         self._imxFSM = None
         self._bandFSM = None
+        self._lcdAPI = lcdAPI()
         self._buttonAPI = buttonAPI()
+        self._buttonAPI.setPowerCallback(self._lcdAPI.backlit_switch)
 
         self._states = [
             State(name = 'stateLogin',      on_enter = 'actLogin',      ignore_invalid_triggers = True),
