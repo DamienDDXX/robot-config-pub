@@ -7,6 +7,7 @@ import platform
 
 from utility import audioRecord, camera
 from manager.buttonAPI import buttonAPI
+from manager.lcdAPI import lcdAPI
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -21,6 +22,7 @@ _cbButtonPlay  = None
 _cbButtonIncVolume = None
 _cbButtonDecVolume = None
 
+_lcdAPI = None
 
 # radio, 测试扬声器
 def make_radio_filename():
@@ -107,7 +109,9 @@ def enter_monitor_test_env():
     if platform.system().lower() == 'windows':
         return True, 'OK'
     elif platform.system().lower() == 'linux':
-        # TODO
+        global _lcdAPI
+        if not _lcdAPI:
+            _lcdAPI = lcdAPI()
         return True, 'OK'
     else:
         return True, 'OK'
@@ -117,7 +121,6 @@ def exit_monitor_test_env():
     if platform.system().lower() == 'windows':
         return True, 'OK'
     elif platform.system().lower() == 'linux':
-        # TODO
         return True, 'OK'
     else:
         return True, 'OK'
@@ -127,7 +130,31 @@ def start_test_monitor():
     if platform.system().lower() == 'windows':
         return True, 'OK'
     elif platform.system().lower() == 'linux':
-        # TODO
+        global _lcdAPI
+        if not _lcdAPI:
+            _lcdAPI = lcdAPI()
+        time.sleep(1)
+        _lcdAPI.backlit_off()       # 关闭背光
+        time.sleep(1)
+        _lcdAPI.backlit_on()        # 打开背光
+        time.sleep(1)
+        _lcdAPI.page_logo()
+        time.sleep(1)
+        _lcdAPI.page_wait()
+        time.sleep(1)
+        _lcdAPI.page_blink()
+        time.sleep(1)
+        _lcdAPI.page_fail()
+        time.sleep(1)
+        _lcdAPI.page_happy()
+        time.sleep(1)
+        _lcdAPI.page_listen()
+        time.sleep(1)
+        _lcdAPI.page_sad()
+        time.sleep(1)
+        _lcdAPI.page_smile()
+        time.sleep(1)
+        _lcdAPI.page_logo()
         return True, 'OK'
     else:
         return True, 'OK'
