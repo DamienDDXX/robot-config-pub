@@ -5,6 +5,7 @@ import time
 import pyaudio, wave
 import os, sys, platform
 from multiprocessing import Process
+from data_access import volume
 
 __all__ = [
         'audioRecord',
@@ -15,6 +16,9 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
 RECORD_SECONDS = 5
+
+CAPTURE_VALUE = 60
+PLAYBACK_LIST = [ 0, 100, 137, 155, 172, 184, 192, 200, 208, 214, 220, 224, 228, 233, 237, 240, 244, 247, 249, 250, 251 ]
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -214,14 +218,57 @@ def soundDudu():
         return p
     return None
 
+# 初始化麦克风
+def captureInit():
+    global CAPTURE_VALUE
+    try:
+        os.system('amixer cset numid=1 %d' %CAPTURE_VALUE)  # 设置麦克风灵敏度
+    finally:
+        pass
+
+# 初始化音量
+def volumeInit():
+    global PLAYBACK_LIST
+    try:
+        playback = PLAYBACK_LIST[len(PLAYBACK_LIST) / 2]
+        ret, v = volume.get_volume()
+        if ret and v >= 0 and v < len(PLAYBACK_LIST):
+            playback = PLAYBACK_LIST[v]
+        os.system('amixer cset numid=10 %d' %playback) # 设置播放音量
+    finally:
+        pass
+
+# 增加音量
+def incVolume():
+    global PLAYBACK_LIST
+    try:
+        _, v = volume.get_volume()
+        v = v + 1
+        if v >= 0 and v < len(PLAYBACK_LIST):
+            volume.set_volume(v)
+            playback = PLAYBACK_LIST[v]
+            os.system('amixer cset numid=10 %d' %playback) # 设置播放音量
+    finally:
+        pass
+
+# 减少音量
+def decVolume():
+    global PLAYBACK_LIST
+    try:
+        _, v = volume.get_volume()
+        v = v - 1
+        if v >= 0 and v < len(PLAYBACK_LIST):
+            volume.set_volume(v)
+            playback = PLAYBACK_LIST[v]
+            os.system('amixer cset numid=10 %d' %playback) # 设置播放音量
+    finally:
+        pass
+
 
 ################################################################################
 # 测试程序
 if __name__ == '__main__':
-    p = soundDudu()
-    if p:
-        print(p)
-        time.sleep(10)
-        print("terminate")
-        p.terminate()
-        time.sleep(5)
+    captureInit()
+    volumeInit()
+    incVolume()
+    incVolume()
