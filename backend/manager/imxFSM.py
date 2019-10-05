@@ -498,6 +498,8 @@ class imxFSM(object):
 # 测试程序
 if __name__ == '__main__':
     try:
+        audioRecord.captureInit()
+        audioRecord.volumeInit()
         hostName, portNumber, robotId = 'https://ttyoa.com', '8098', 'b827eb319c88'
         server = serverAPI(hostName, portNumber, robotId)
         ret, _ = server.login()
@@ -509,6 +511,8 @@ if __name__ == '__main__':
                 button = buttonAPI()
                 button.setCallCallback(imx.cbButtonCall)
                 button.setMuteCallback(imx.cbButtonMute)
+                button.setIncVolumeCallback(audioRecord.incVolume)
+                button.setDecVolumeCallback(audioRecord.decVolume)
                 while True:
                     time.sleep(1)
     except KeyboardInterrupt:

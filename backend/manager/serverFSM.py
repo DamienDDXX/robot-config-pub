@@ -23,6 +23,7 @@ if platform.system().lower() == 'linux':
     from manager.imxFSM import imxFSM
     from manager.bandFSM import bandFSM
     from data_access import bracelet
+    from utility import audioRecord
 
 __all__ = [
         'serverFSM',
@@ -72,6 +73,8 @@ class serverFSM(object):
         self._lcdAPI = lcdAPI()
         self._buttonAPI = buttonAPI()
         self._buttonAPI.setPowerCallback(self._lcdAPI.backlit_switch)
+        self._buttonAPI.setIncVolumeCallback(audioRecord.incVolume)
+        self._buttonAPI.setDecVolumeCallback(audioRecord.decVolume)
 
         self._states = [
             State(name = 'stateLogin',      on_enter = 'actLogin',      ignore_invalid_triggers = True),
@@ -113,6 +116,10 @@ class serverFSM(object):
                 'dest':     'stateLogin'
             }
         ]
+
+        # 初始化麦克风灵敏度和扬声器音量
+        audioRecord.captureInit()
+        audioRecord.volumeInit()
 
         # 启动状态机线程
         self._eventList = []
@@ -195,8 +202,6 @@ class serverFSM(object):
                     # 创建音频管理状态机
                     self._mp3FSM = mp3FSM(hostName = self._hostName, portNumber = self._portNumber, token = self._token, getMp3List = self._serverAPI.getMp3List)
                     self._buttonAPI.setPlayCallback(self._mp3FSM.cbButtonPlay)
-                    self._buttonAPI.setIncVolumeCallback(self._mp3FSM.cbButtonIncVolume)
-                    self._buttonAPI.setDecVolumeCallback(self._mp3FSM.cbButtonDecVolume)
                     if platform.system().lower() == 'windows':
                         self._buttonAPI.setRadioCallback(self._mp3FSM.cbButtonRadio)
                         self._buttonAPI.setImxCallback(self._mp3FSM.cbButtonImx)

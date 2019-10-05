@@ -18,6 +18,7 @@ if __name__ == '__main__':
     sys.path.append('..')
     from manager.serverAPI import serverAPI
     from manager.buttonAPI import buttonAPI
+    from utility import audioRecord
 
 from utility import setLogging
 
@@ -35,14 +36,10 @@ else:
 
 MP3_FILE_URL_POSTFIX = '/medical/basic/file/download'   # 音频文件地址后缀
 
-VOLUME_MIN  = 0.00
-VOLUME_MAX  = 1.00
-VOLUME_INV  = 0.05
-
 # 音频状态机管理类
 class mp3FSM(object):
     # 类初始化
-    def __init__(self, hostName, portNumber, token, getMp3List, volume = 0.5, mp3Dir = MP3_DIR_):
+    def __init__(self, hostName, portNumber, token, getMp3List, mp3Dir = MP3_DIR_):
         if platform.system().lower() == 'linux':
             # 挂载虚拟盘
             os.system('sudo mount -t tmpfs -o size=300m,mode=0777 tmpfs /ram')
@@ -53,7 +50,6 @@ class mp3FSM(object):
         self._getMp3Lsit = getMp3List
         self._playList = []
         self._fileList = []
-        self._volume = volume
         self._mp3Dir = MP3_DIR_
         self._sound = None
 
@@ -293,7 +289,7 @@ class mp3FSM(object):
                 if os.path.isfile(self._sound):
                     if not mixer.get_init():
                         mixer.init(frequency = 48000)
-                    mixer.music.set_volume(self._volume * 0.5)
+                        mixer.music.set_volume(1)
                     mixer.music.load(self._sound)
                     mixer.music.play(loops = -1, start = 0.0)
                     logging.debug('play mp3 file: %s, start - 0.000000.' %self._sound)
@@ -301,15 +297,13 @@ class mp3FSM(object):
                         self._playFiniEvent.wait(0.5)
                         if self._playFiniEvent.isSet():
                             raise Exception('fini')
-                        if self._volume != mixer.music.get_volume() * 2:
-                            mixer.music.set_volume(self._volume * 0.5)
             else:                           # 播放音频
                 while len(self._playList) > 0:
                     filePath = self._playList[0]['filePath']
                     if os.path.isfile(filePath):
                         if not mixer.get_init():
                             mixer.init(frequency = 48000)
-                        mixer.music.set_volume(self._volume * 0.5)
+                            mixer.music.set_volume(1)
                         mixer.music.load(filePath)
                         mixer.music.play(start = self._playList[0]['pos'])
                         logging.debug('play mp3 file: %s, start - %f.' %(filePath, self._playList[0]['pos']))
@@ -323,8 +317,6 @@ class mp3FSM(object):
                             else:
                                 if not mixer.music.get_busy():      # 播放完毕，切换到下一首
                                     break
-                            if self._volume != mixer.music.get_volume() * 2:
-                                mixer.music.set_volume(self._volume * 0.5)
                     else:
                         del self._playList[0]
         except Exception, e:
@@ -416,18 +408,6 @@ class mp3FSM(object):
         logging.debug('mp3FSM.cbButtonPlay().')
         self.putEvent('evtButtonPlay', self.evtButtonPlay)
 
-    # 音量增加键回调函数
-    def cbButtonIncVolume(self):
-        volume = self._volume + VOLUME_INV
-        self._volume = volume if volume < VOLUME_MAX else VOLUME_MAX
-        logging.debug('mp3FSM.cbButtonIncVolume(%f).' %self._volume)
-
-    # 音量减少键回调函数
-    def cbButtonDecVolume(self):
-        volume = self._volume - VOLUME_INV
-        self._volume = volume if volume > VOLUME_MIN else VOLUME_MIN
-        logging.debug('mp3FSM.cbButtonDecVolume(%f).' %self._volume)
-
     # 广播模拟按键回调函数
     def cbButtonRadio(self):
         logging.debug('mp3FSM.cbButtonRadio().')
@@ -496,6 +476,8 @@ class mp3FSM(object):
 # 测试程序
 if __name__ == '__main__':
     try:
+        audioRecord.captureInit()
+        audioRecord.volumeInit()
         hostName, portNumber, robotId = 'https://ttyoa.com', '8098', 'b827eb319c88'
         server = serverAPI(hostName = hostName, portNumber = portNumber, robotId = robotId)
         ret, token = server.login()
@@ -504,8 +486,8 @@ if __name__ == '__main__':
             button = buttonAPI()
             button.setMuteCallback(mp3.cbButtonPlay)
             button.setPlayCallback(mp3.cbButtonPlay)
-            button.setIncVolumeCallback(mp3.cbButtonIncVolume)
-            button.setDecVolumeCallback(mp3.cbButtonDecVolume)
+            button.setIncVolumeCallback(audioRecord.incVolume)
+            button.setDecVolumeCallback(audioRecord.decVolume)
             if platform.system().lower() == 'windows':
                 button.setRadioCallback(mp3.cbButtonRadio)
                 button.setImxCallback(mp3.cbButtonImx)
