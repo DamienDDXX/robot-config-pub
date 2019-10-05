@@ -5,6 +5,11 @@ import time
 import pyaudio, wave
 import os, sys, platform
 from multiprocessing import Process
+
+if __name__ == '__main__':
+    import sys
+    sys.path.append('..')
+
 from data_access import volume
 
 __all__ = [
@@ -234,6 +239,9 @@ def volumeInit():
         ret, v = volume.get_volume()
         if ret and v >= 0 and v < len(PLAYBACK_LIST):
             playback = PLAYBACK_LIST[v]
+        else:
+            v = len(PLAYBACK_LIST) / 2
+            volume.set_volume(v)
         os.system('amixer cset numid=10 %d' %playback) # 设置播放音量
     finally:
         pass
