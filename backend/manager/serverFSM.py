@@ -122,7 +122,7 @@ class serverFSM(object):
         audioRecord.volumeInit()
 
         # 播放启动音效
-        audioRecord.soundStartu(wait = True)
+        audioRecord.soundStartup(wait = True)
 
         # 启动状态机线程
         self._eventList = []
