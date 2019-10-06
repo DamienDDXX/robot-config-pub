@@ -227,7 +227,8 @@ def soundDudu():
 def captureInit():
     global CAPTURE_VALUE
     try:
-        os.system('amixer cset numid=1 %d' %CAPTURE_VALUE)  # 设置麦克风灵敏度
+        os.system('amixer -c 0 cset numid=1 %d' %CAPTURE_VALUE)  # 设置麦克风灵敏度
+        os.system('amixer -c 1 cset numid=1 %d' %CAPTURE_VALUE)  # 设置麦克风灵敏度
     finally:
         pass
 
@@ -242,7 +243,8 @@ def volumeInit():
         else:
             v = len(PLAYBACK_LIST) / 2
             volume.set_volume(v)
-        os.system('amixer cset numid=10 %d' %playback) # 设置播放音量
+        os.system('amixer -c 0 cset numid=10 %d' %playback) # 设置播放音量
+        os.system('amixer -c 1 cset numid=10 %d' %playback) # 设置播放音量
     finally:
         pass
 
@@ -255,7 +257,8 @@ def incVolume():
         if v >= 0 and v < len(PLAYBACK_LIST):
             volume.set_volume(v)
             playback = PLAYBACK_LIST[v]
-            os.system('amixer cset numid=10 %d' %playback) # 设置播放音量
+            os.system('amixer -c 0 cset numid=10 %d' %playback) # 设置播放音量
+            os.system('amixer -c 1 cset numid=10 %d' %playback) # 设置播放音量
     finally:
         pass
 
