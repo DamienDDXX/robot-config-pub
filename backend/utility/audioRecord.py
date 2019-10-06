@@ -27,6 +27,14 @@ PLAYBACK_LIST = [ 0, 100, 137, 155, 172, 184, 192, 200, 208, 214, 220, 224, 228,
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
+# 获取声卡编号
+def soundCard():
+    if 'card 0' in os.popen('aplay -l | grep seeed2micvoicec').read():
+        return True, 0
+    elif 'card 1' in os.popen('aplay -l | grep seeed2micvoicec').read():
+        return True, 1
+    return False, None
+
 # 录音
 def audioRecord(wavFile, seconds):
     if platform.system().lower() == 'windows':
@@ -62,12 +70,13 @@ def audioRecord(wavFile, seconds):
                 wf.close()
     elif platform.system().lower() == 'linux':
         try:
-            os.system('arecord -Dhw:0 -d 5 -f cd -r 44100 -c 2 -t wav %s' %wavFile)
+            ret, card = soundCard()
+            if ret:
+                os.system('arecord -Dhw:%d -d 5 -f cd -r 44100 -c 2 -t wav %s' %(card, wavFile))
         finally:
             pass
     else:
         pass
-
 
 # 播放
 def audioPlay(wavFile):
@@ -227,8 +236,9 @@ def soundDudu():
 def captureInit():
     global CAPTURE_VALUE
     try:
-        os.system('amixer -c 0 cset numid=1 %d' %CAPTURE_VALUE)  # 设置麦克风灵敏度
-        os.system('amixer -c 1 cset numid=1 %d' %CAPTURE_VALUE)  # 设置麦克风灵敏度
+        ret, card = soundCard()
+        if ret:
+            os.system('amixer -c %d cset numid=1 %d' %(card, CAPTURE_VALUE))  # 设置麦克风灵敏度
     finally:
         pass
 
@@ -243,8 +253,9 @@ def volumeInit():
         else:
             v = len(PLAYBACK_LIST) / 2
             volume.set_volume(v)
-        os.system('amixer -c 0 cset numid=10 %d' %playback) # 设置播放音量
-        os.system('amixer -c 1 cset numid=10 %d' %playback) # 设置播放音量
+        ret, card = soundCard()
+        if ret:
+            os.system('amixer -c %d cset numid=10 %d' %(card, playback)) # 设置播放音量
     finally:
         pass
 
@@ -257,8 +268,9 @@ def incVolume():
         if v >= 0 and v < len(PLAYBACK_LIST):
             volume.set_volume(v)
             playback = PLAYBACK_LIST[v]
-            os.system('amixer -c 0 cset numid=10 %d' %playback) # 设置播放音量
-            os.system('amixer -c 1 cset numid=10 %d' %playback) # 设置播放音量
+            ret, card = soundCard()
+            if ret:
+                os.system('amixer -c %d cset numid=10 %d' %(card, playback)) # 设置播放音量
     finally:
         pass
 
@@ -271,7 +283,9 @@ def decVolume():
         if v >= 0 and v < len(PLAYBACK_LIST):
             volume.set_volume(v)
             playback = PLAYBACK_LIST[v]
-            os.system('amixer cset numid=10 %d' %playback) # 设置播放音量
+            ret, card = soundCard()
+            if ret:
+                os.system('amixer -c %d cset numid=10 %d' %(card, playback)) # 设置播放音量
     finally:
         pass
 
