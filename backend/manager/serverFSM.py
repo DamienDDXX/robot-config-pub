@@ -121,6 +121,9 @@ class serverFSM(object):
         audioRecord.captureInit()
         audioRecord.volumeInit()
 
+        # 播放启动音效
+        audioRecord.soundStartu(wait = True)
+
         # 启动状态机线程
         self._eventList = []
         self._eventQueue = Queue.Queue(5)

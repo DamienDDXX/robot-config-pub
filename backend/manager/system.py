@@ -10,7 +10,7 @@ import data_access
 import os, platform
 from data_access import server
 from manager.serverFSM import serverFSM
-from utility import setLogging, audioRecord
+from utility import setLogging
 from multiprocessing import Process
 
 # 局部变量
@@ -21,8 +21,6 @@ def init(robotId = 'b827eb319c88'):
     logging.debug('system.init().')
     global _system
     if not _system:
-        # 播放启动音效
-        audioRecord.soundStartup(wait = True)
         _, server_info = server.get_server_info()   # 获取服务器地址
         hostName = server_info['address']
         portNumber = server_info['port']
