@@ -143,12 +143,12 @@ def audioPlayLoop(wavFile):
         if wf:
             wf.close()
 
-# 播放启动音效
-def soundStartup(wait):
+# 播放音效
+def soundPlay(wavFile, wait):
     if platform.system().lower() == 'windows':
-        sound = os.path.join(base_dir, '..\static\mp3\\startup.wav')
+        sound = os.path.join(base_dir, '..\static\mp3\\%s' %wavFile)
     elif platform.system().lower() == 'linux':
-        sound = os.path.join(base_dir, '../static/mp3/startup.wav')
+        sound = os.path.join(base_dir, '../static/mp3/%s' %wavFile)
     else:
         sound = None
 
@@ -161,63 +161,46 @@ def soundStartup(wait):
                 time.sleep(0.1)
         return p
     return None
+
+# 播放启动音效
+def soundStartup(wait):
+    p = soundPlay('startup.wav', wait)
+    return p
 
 # 播放连接成功音效
 def soundConnected(wait):
-    if platform.system().lower() == 'windows':
-        sound = os.path.join(base_dir, '..\static\mp3\\connected.wav')
-    elif platform.system().lower() == 'linux':
-        sound = os.path.join(base_dir, '../static/mp3/connected.wav')
-    else:
-        sound = None
-
-    if sound and os.path.isfile(sound):
-        p = Process(target = audioPlay, args = (sound, ))
-        p.daemon = True
-        p.start()
-        if wait:
-            while p.is_alive():
-                time.sleep(0.1)
-        return p
-    return None
+    p = soundPlay('connected.wav', wait)
+    return p
 
 # 播放掉线音效
 def soundOffline(wait):
-    if platform.system().lower() == 'windows':
-        sound = os.path.join(base_dir, '..\static\mp3\\offline.wav')
-    elif platform.system().lower() == 'linux':
-        sound = os.path.join(base_dir, '../static/mp3/offline.wav')
-    else:
-        sound = None
-
-    if sound and os.path.isfile(sound):
-        p = Process(target = audioPlay, args = (sound, ))
-        p.daemon = True
-        p.start()
-        if wait:
-            while p.is_alive():
-                time.sleep(0.1)
-        return p
-    return None
+    p = soundPlay('offline.wav', wait)
+    return p
 
 # 播放异常音效
 def soundException(wait):
-    if platform.system().lower() == 'windows':
-        sound = os.path.join(base_dir, '..\static\mp3\\exception.wav')
-    elif platform.system().lower() == 'linux':
-        sound = os.path.join(base_dir, '../static/mp3/exception.wav')
-    else:
-        sound = None
+    p = soundPlay('exception.wav', wait)
+    return p
 
-    if sound and os.path.isfile(sound):
-        p = Process(target = audioPlay, args = (sound, ))
-        p.daemon = True
-        p.start()
-        if wait:
-            while p.is_alive():
-                time.sleep(0.1)
-        return p
-    return None
+# 播放打开自动接听模式音效
+def soundAutoModeOn(wait):
+    p = soundPlay('automode_on.wav', wait)
+    return p
+
+# 播放关闭自动接听模式音效
+def soundAutoModeOff(wait):
+    p = soundPlay('automode_off.wav', wait)
+    return p
+
+# 播放手环连接成功音效
+def soundBandOk(wait):
+    p = soundPlay('band_ok.wav', wait)
+    return p
+
+# 播放手环连接失败音效
+def soundBandFail(wait):
+    p = soundPlay('band_fail.wav', wait)
+    return p
 
 # 播放电话呼叫音效
 def soundDudu():
@@ -296,7 +279,13 @@ def decVolume():
 ################################################################################
 # 测试程序
 if __name__ == '__main__':
-    captureInit()
-    volumeInit()
-    incVolume()
-    incVolume()
+    soundStartup(True)
+    soundOffline(True)
+    soundConnected(True)
+    soundException(True)
+    soundAutoModeOn(False)
+    time.sleep(1)
+    soundAutoModeOff(False)
+    time.sleep(1)
+    soundBandOk(True)
+    soundBandOk(True)

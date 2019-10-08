@@ -367,6 +367,10 @@ class imxFSM(object):
     def cbButtonMute(self):
         logging.debug('imxFSM.cbButtonMute().')
         self._autoMode = not self._autoMode
+        if self._autoMode:
+            soundAutoModeOn(False)
+        else:
+            soundAutoModeOff(False)
 
     # 关闭音效
     def callSoundFini(self, desc, event):
