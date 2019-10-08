@@ -29,9 +29,12 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 
 # 获取声卡编号
 def soundCard():
-    if 'card 0' in os.popen('aplay -l | grep seeed2micvoicec').read():
+    fd = os.popen('aplay -l | grep seeed2micvoicec')
+    content = fd.read()
+    fd.close()
+    if 'card 0' in content:
         return True, 0
-    elif 'card 1' in os.popen('aplay -l | grep seeed2micvoicec').read():
+    elif 'card 1' in content:
         return True, 1
     return False, None
 

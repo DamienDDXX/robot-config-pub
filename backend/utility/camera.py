@@ -5,6 +5,8 @@ import os
 import base64
 import time
 import platform
+import logging
+import traceback
 
 if platform.system().lower() == 'windows':
     import cv2
@@ -50,6 +52,19 @@ def pictureToBase64(picFile):
     with open(picFile, 'rb') as f:
         x = base64.b64encode(f.read())
     return x
+
+# 检查摄像头
+def checkCamera():
+    try:
+        fd = os.popen('vcgencmd get_camera')
+        content = fd.read()
+        fd.close()
+    except:
+        traceback.print_exc()
+        return False
+    if 'supported=1 detected=1' in content:
+        return True
+    return False
 
 
 if __name__ == '__main__':
