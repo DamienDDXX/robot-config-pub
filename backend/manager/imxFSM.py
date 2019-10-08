@@ -368,9 +368,9 @@ class imxFSM(object):
         logging.debug('imxFSM.cbButtonMute().')
         self._autoMode = not self._autoMode
         if self._autoMode:
-            soundAutoModeOn(False)
+            audioRecord.soundAutoModeOn(False)
         else:
-            soundAutoModeOff(False)
+            audioRecord.soundAutoModeOff(False)
 
     # 关闭音效
     def callSoundFini(self, desc, event):
