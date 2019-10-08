@@ -22,7 +22,7 @@ CHANNELS = 1
 RATE = 16000
 RECORD_SECONDS = 5
 
-CAPTURE_VALUE = 60
+CAPTURE_VALUE = 40
 PLAYBACK_LIST = [ 0, 100, 137, 155, 172, 184, 192, 200, 208, 214, 220, 224, 228, 233, 237, 240, 244, 247, 249, 250, 251 ]
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
