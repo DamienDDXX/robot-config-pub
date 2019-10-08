@@ -20,6 +20,8 @@ LCD_CMD_PAGE_LISTEN = 0x17
 LCD_CMD_PAGE_SAD    = 0x18
 LCD_CMD_PAGE_SMILE  = 0x19
 
+lcd_busy = False
+
 # 液晶接口类
 class lcdAPI(object):
     # 初始化
@@ -28,9 +30,16 @@ class lcdAPI(object):
         self._bus = smbus.SMBus(1)
 
     def command(self, cmd):
+        global lcd_busy
         try:
+            for wait in range(0, 10):
+                if not lcd_busy:
+                    break
+                time.sleep(0.1)
+            lcd_busy = True
             self._bus.write_byte(cmd, 0x00)
             time.sleep(0.1)
+            lcd_busy = False
         except IOError:
             pass
 
