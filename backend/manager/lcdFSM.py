@@ -148,9 +148,9 @@ class lcdFSM(object):
                         raise Exception('fini')
                     time.sleep(1)
                 self._lcdAPI.page_blink()
-                time.sleep(1)
+                time.sleep(0.3)
                 if self.state == 'stateIdle':
-                    self._lcdAPI.page_wait()
+                    self._lcdAPI.page_smile()
                 elif self.state == 'statePlay':
                     self._lcdAPI.page_listen()
                 elif self.state == 'statePlay':
