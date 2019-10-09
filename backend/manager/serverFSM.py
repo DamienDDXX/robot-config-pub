@@ -409,6 +409,8 @@ class serverFSM(object):
                 self._imxFSM.fini()
             if self._bandFSM:
                 self._bandFSM.fini()
+            if self._lcdFSM:
+                self._lcdFSM.fini()
         if self._fsmThread:
             self.putEvent('fini', None)
             self._fsmDoneEvent.wait()

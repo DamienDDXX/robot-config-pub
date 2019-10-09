@@ -142,13 +142,14 @@ class lcdFSM(object):
         logging.debug('lcdFSM.blinkThread().')
         try:
             while True:
-                wait = random.randint(3, 12)
+                wait = random.randint(5, 12)
                 for wait in range(wait):
                     if self._blinkFiniEvent.isSet():
                         raise Exception('fini')
                     time.sleep(1)
                 self._lcdAPI.page_blink()
                 time.sleep(0.3)
+                logging.debug('lcdFSM.blinkThread(): state - %s' %self.state)
                 if self.state == 'stateIdle':
                     self._lcdAPI.page_smile()
                 elif self.state == 'statePlay':
