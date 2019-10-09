@@ -200,10 +200,16 @@ class serverFSM(object):
         except Exception, e:
             if e.message == 'login':
                 # 登录成功
+                self._lcdFSM.lcdIdle()
                 audioRecord.soundConnected(wait = True)
                 if not self._mp3FSM:
                     # 创建音频管理状态机
-                    self._mp3FSM = mp3FSM(hostName = self._hostName, portNumber = self._portNumber, token = self._token, getMp3List = self._serverAPI.getMp3List)
+                    self._mp3FSM = mp3FSM(hostName = self._hostName,
+                                          portNumber = self._portNumber,
+                                          token = self._token,
+                                          getMp3List = self._serverAPI.getMp3List,
+                                          lcdPlay = self._lcdFSM.lcdPlay,
+                                          lcdIdle = self._lcdFSM.lcdIdle)
                     self._buttonAPI.setPlayCallback(self._mp3FSM.cbButtonPlay)
                     if platform.system().lower() == 'windows':
                         self._buttonAPI.setRadioCallback(self._mp3FSM.cbButtonRadio)
@@ -264,7 +270,13 @@ class serverFSM(object):
                     # 配置视频服务器
                     personId = personList[0]['personId']
                     if not self._imxFSM:
-                        self._imxFSM = imxFSM(server = vsvrIp, port = vsvrPort, personId = personId, getDoctorList = self._serverAPI.getDoctorList, saveCallLog = self._serverAPI.saveCallLog)
+                        self._imxFSM = imxFSM(server = vsvrIp,
+                                              port = vsvrPort,
+                                              personId = personId,
+                                              getDoctorList = self._serverAPI.getDoctorList,
+                                              saveCallLog = self._serverAPI.saveCallLog,
+                                              lcdImx = self._lcdFSM.lcdImx,
+                                              lcdIdle = self._lcdFSM.lcdIdle)
                         self._imxFSM.setExitIdleCallback(self.cbEntryImxMode)
                         self._imxFSM.setEntryIdleCallback(self.cbExitImxMode)
                         self._buttonAPI.setCallCallback(self._imxFSM.cbButtonCall)
@@ -278,6 +290,7 @@ class serverFSM(object):
                 self._confUpdated = True     # 配置更新成功
                 self.putEvent('evtConfigOk', self.evtConfigOk)
             elif e.message == 'abort':
+                self._lcdFSM.lcdOffline()
                 audioRecord.soundOffline(wait = True)
                 self.putEvent('evtFailed', self.evtFailed)
         finally:
@@ -338,6 +351,7 @@ class serverFSM(object):
             if e.message == 'ok':
                 self.putEvent('evtHeartbeat', self.evtHeartbeat)
             elif e.message == 'fail':
+                self._lcdFSM.lcdOffline()
                 audioRecord.soundOffline(wait = True)
                 self.putEvent('evtFailed', self.evtFailed)
         finally:

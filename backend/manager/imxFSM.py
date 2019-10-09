@@ -32,13 +32,15 @@ ROLE_SERVER = 15    # 在线服务员
 # 视频状态机类
 class imxFSM(object):
     # 初始化
-    def __init__(self, server, port, personId, getDoctorList, saveCallLog):
+    def __init__(self, server, port, personId, getDoctorList, saveCallLog, lcdImx = None, lcdIdle = None):
         logging.debug('imxFSM.__init__(%s, %s, %s)' %(server, port, personId))
         self._server = server
         self._port = port
         self._personId = personId
         self._getDoctorList = getDoctorList
         self._saveCallLog = saveCallLog
+        self._lcdImx = lcdImx
+        self._lcdIdle = lcdIdle
         self._doctor = None
         self._doctorList = []
         self._orderList = [ ROLE_VD, ROLE_PHD, ROLE_NURSE, ROLE_GP, ROLE_SERVER ]
@@ -78,7 +80,7 @@ class imxFSM(object):
             State(name = 'stateCall',       on_enter = 'actCall',                           ignore_invalid_triggers = True),
             State(name = 'stateWaitAccept', on_enter = 'actWaitCall',                       ignore_invalid_triggers = True),
             State(name = 'stateIncoming',   on_enter = 'actAccept',                         ignore_invalid_triggers = True),
-            State(name = 'stateEstablished',on_enter = 'entryEstablished',                  ignore_invalid_triggers = True),
+            State(name = 'stateEstablished',on_enter = 'entryEstablished', on_exit = 'exitEstablished',  ignore_invalid_triggers = True),
         ]
         self._transitions = [
             # 初始状态
@@ -297,6 +299,14 @@ class imxFSM(object):
     # 进入通话状态
     def entryEstablished(self):
         logging.debug('imxFSM.entryEstablished().')
+        if self._lcdImx:
+            self._lcdImx()
+
+    # 退出通话状态
+    def exitEstablished(self):
+        logging.debug('imxFSM.exitEstablished().')
+        if self._lcdIdle:
+            self._lcdIdle()
 
     # 登出
     def actLogout(self):

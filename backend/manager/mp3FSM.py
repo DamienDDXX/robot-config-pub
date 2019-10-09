@@ -39,7 +39,7 @@ MP3_FILE_URL_POSTFIX = '/medical/basic/file/download'   # 音频文件地址后�
 # 音频状态机管理类
 class mp3FSM(object):
     # 类初始化
-    def __init__(self, hostName, portNumber, token, getMp3List, mp3Dir = MP3_DIR_):
+    def __init__(self, hostName, portNumber, token, getMp3List, mp3Dir = MP3_DIR_, lcdPlay = None, lcdIdle = None):
         if platform.system().lower() == 'linux':
             # 挂载虚拟盘
             os.system('sudo mount -t tmpfs -o size=300m,mode=0777 tmpfs /ram')
@@ -48,6 +48,8 @@ class mp3FSM(object):
         self._portNumber = portNumber
         self._token = token
         self._getMp3Lsit = getMp3List
+        self._lcdPlay = lcdPlay
+        self._lcdIdle = lcdIdle
         self._playList = []
         self._fileList = []
         self._mp3Dir = MP3_DIR_
@@ -344,6 +346,8 @@ class mp3FSM(object):
     # 终止播放
     def playFini(self, quit = False):
         logging.debug('mp3FSM.playFini().')
+        if self._lcdIdle:
+            self._lcdIdle()
         if self._playThread:
             self._playFiniEvent.set()
             self._playDoneEvent.wait()
@@ -353,6 +357,8 @@ class mp3FSM(object):
     # 开始播放
     def playInit(self, sound = None):
         logging.debug('mp3FSM.playInit().')
+        if self._lcdPlay:
+            self._lcdPlay()
         if not self._playThread:
             self._playThread = threading.Thread(target = self.playThread)
             self._playThread.start()

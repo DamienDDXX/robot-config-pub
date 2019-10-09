@@ -222,6 +222,26 @@ class lcdFSM(object):
             return True, v[0], v[1]
         return False, None, None
 
+    # 进入通话状态
+    def lcdImx(self):
+        self.putEvent('evtImx', self.evtImx)
+
+    # 进入空闲状态
+    def lcdIdle(self):
+        self.putEvent('evtIdle', self.evtIdle)
+
+    # 进入掉线状态
+    def lcdOffline(self):
+        self.putEvent('evtOffset', self.evtOffline)
+
+    # 进入播放状态
+    def lcdPlay(self):
+        self.putEvent('evtPlay', self.evtPlay)
+
+    # 进入异常状态
+    def lcdException(self):
+        self.putEvent('evtException', self.evtException)
+
 
 ###############################################################################
 # 测试程序
