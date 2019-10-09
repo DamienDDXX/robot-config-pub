@@ -86,7 +86,7 @@ class lcdAPI(object):
         self.command(LCD_CMD_PAGE_SAD)
 
     def page_smile(self):
-        self.command(LCD_CMD_PAGE_SAD)
+        self.command(LCD_CMD_PAGE_SMILE)
 
 
 ################################################################################

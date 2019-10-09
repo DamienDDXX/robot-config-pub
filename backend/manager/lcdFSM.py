@@ -16,6 +16,8 @@ if __name__ == '__main__':
 
 from manager.lcdAPI import lcdAPI
 
+from utility import setLogging
+
 __all__ = [
         'lcdFSM'
         ]
@@ -35,6 +37,7 @@ class lcdFSM(object):
         self._blinkDoneEvent = threading.Event()
 
         self._states = [
+                State(name = 'stateWait',       on_enter = 'actWait',       ignore_invalid_triggers = True),
                 State(name = 'stateIdle',       on_enter = 'actIdle',       ignore_invalid_triggers = True),
                 State(name = 'stateOffline',    on_enter = 'actOffLine',    ignore_invalid_triggers = True),
                 State(name = 'stateException',  on_enter = 'actException',  ignore_invalid_triggers = True),
@@ -82,7 +85,7 @@ class lcdFSM(object):
             self.blinkInit()
 
             self._fsmDoneEvent.clear()
-            self.to_stateIdle()
+            self.to_stateWait()
             while True:
                 ret, desc, event = self.getEvent()
                 if ret:
@@ -91,6 +94,8 @@ class lcdFSM(object):
                     else:
                         event()
                         logging.debug('lcdFSM: state - %s', self.state)
+        except Exception, e:
+            pass
         finally:
             self.aliveFini()
             self.blinkFini()
@@ -180,6 +185,10 @@ class lcdFSM(object):
         if self._blinkThreak:
             self._blinkFiniEvent.set()
             self._blinkDoneEvent.wait()
+
+    def actWait(self):
+        logging.debug('lcdFSM.actWait().')
+        self._lcdAPI.page_wait()
 
     def actIdle(self):
         logging.debug('lcdFSM.actIdle().')
