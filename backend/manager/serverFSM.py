@@ -318,44 +318,43 @@ class serverFSM(object):
     def heartbeatThread(self):
         logging.debug('serverFSM.heartbeatThread().')
         try:
-            self._heartbeatDoneEvent.clear()
-            self._heartbeatFiniEvent.clear()
-            self._heartbeatFiniEvent.wait(self._heartbeatInv)
-            if self._heartbeatFiniEvent.isSet():
-                raise Exception('fini')
-            for retry in range(0, 6):
-                hvx = self._bandFSM.getHvx()
-                ret, playVer, confVer, softVer = self._serverAPI.heatbeat(hvx = hvx,
-                                                                          playVer = self._playVer if self._playUpdated else None,
-                                                                          confVer = self._confVer if self._confUpdated else None)
-                if ret:
-                    if playVer and playVer != self._playVer:
-                        self._playVer = playVer
-                        self._playUpdated = False
-                        self._mp3FSM.update(self.playUpdated)   # 更新音频列表
-                    if confVer and confVer != self._confVer:
-                        self._confVer = confVer
-                        self._confUpdated = False
-                        self.putEvent('evtConfig', self.evtConfig)   # 重新更新配置
-                    if softVer and softVer != self._softVer:
-                        # TODO:
-                        #   启动更新机器人固件操作
-                        pass
-                    raise Exception('ok')
-                logging.debug('heartbeat failed.')
-                logging.debug('retry to heatbeat in 30s.')
-                self._heartbeatFiniEvent.wait(30)
+            while True:
+                # 等待同步时间间隔
+                self._heartbeatDoneEvent.clear()
+                self._heartbeatFiniEvent.clear()
+                self._heartbeatFiniEvent.wait(self._heartbeatInv)
                 if self._heartbeatFiniEvent.isSet():
                     raise Exception('fini')
-            logging.debug('heatbeat timeout.')
-            raise Exception('fail')
+
+                ret = False
+                for retry in range(0, 6):
+                    hvx = self._bandFSM.getHvx()
+                    ret, playVer, confVer, softVer = self._serverAPI.heatbeat(hvx = hvx,
+                                                                              playVer = self._playVer if self._playUpdated else None,
+                                                                              confVer = self._confVer if self._confUpdated else None)
+                    if ret:
+                        if playVer and playVer != self._playVer:
+                            self._playVer = playVer
+                            self._playUpdated = False
+                            self._mp3FSM.update(self.playUpdated)   # 更新音频列表
+                        if confVer and confVer != self._confVer:
+                            self._confVer = confVer
+                            self._confUpdated = False
+                            self.putEvent('evtConfig', self.evtConfig)   # 重新更新配置
+                        if softVer and softVer != self._softVer:
+                            # TODO:
+                            #   启动更新机器人固件操作
+                            pass
+                        break
+
+                if not ret:
+                    logging.debug('heartbeat failed.')
+                    logging.debug('retry to heatbeat in 30s.')
+                    self._heartbeatFiniEvent.wait(30)
+                    if self._heartbeatFiniEvent.isSet():
+                        raise Exception('fini')
         except Exception as e:
-            if e.message == 'ok':
-                self.putEvent('evtHeartbeat', self.evtHeartbeat)
-            elif e.message == 'fail':
-                self._lcdFSM.lcdOffline()
-                audioRecord.soundOffline(wait = True)
-                self.putEvent('evtFailed', self.evtFailed)
+            pass
         finally:
             logging.debug('serverFSM.heartbeatThread() fini.')
             self._heartbeatThread = None
