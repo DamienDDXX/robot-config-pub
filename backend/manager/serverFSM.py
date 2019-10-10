@@ -270,6 +270,8 @@ class serverFSM(object):
                     # 配置视频服务器
                     personId = personList[0]['personId']
                     if not self._imxFSM:
+                        vsvrIp = '111.12.194.250'
+                        vsvrPort = 8080
                         self._imxFSM = imxFSM(server = vsvrIp,
                                               port = vsvrPort,
                                               personId = personId,
