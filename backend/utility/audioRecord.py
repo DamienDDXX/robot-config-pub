@@ -288,4 +288,4 @@ if __name__ == '__main__':
     soundAutoModeOff(False)
     time.sleep(1)
     soundBandOk(True)
-    soundBandOk(True)
+    soundBandFail(True)
