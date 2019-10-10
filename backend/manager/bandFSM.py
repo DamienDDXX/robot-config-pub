@@ -21,7 +21,7 @@ __all__ = [
         ]
 
 # 宏定义
-MONITOR_INV = 30 * 60
+MONITOR_INV = 10 * 60
 
 # 手环管理状态机类
 class bandFSM(object):
@@ -30,6 +30,7 @@ class bandFSM(object):
         self._bandAPI = bandAPI()
         self._mac = mac
         self._inv = inv
+        self._first = True
         self._connected = False
 
         self._timerThread = None
@@ -113,7 +114,9 @@ class bandFSM(object):
     def actIdle(self):
         logging.debug('bandFSM.actIdle().')
         if self._mac:
-            self.timerInit(self._inv, 'evtMonitor', self.evtMonitor)    # 间隔指定时间后监控健康数据
+            inv = 5 if self._first else self._inv
+            self._first = False
+            self.timerInit(inv, 'evtMonitor', self.evtMonitor)    # 间隔指定时间后监控健康数据
 
     # 扫描手环
     def actScan(self):

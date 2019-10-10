@@ -13,7 +13,8 @@ if __name__ == '__main__':
     import sys
     sys.path.append('..')
 
-from utility import setLogging, audioRecord
+from utility import setLogging
+from utility import audioRecord
 
 from manager.mp3FSM import mp3FSM
 from manager.lcdFSM import lcdFSM
@@ -23,7 +24,6 @@ if platform.system().lower() == 'linux':
     from manager.imxFSM import imxFSM
     from manager.bandFSM import bandFSM
     from data_access import bracelet
-    from utility import audioRecord
 
 __all__ = [
         'serverFSM',
