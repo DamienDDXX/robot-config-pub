@@ -343,7 +343,7 @@ class bandAPI(object):
                     self.disconnect()           # 断开连接
                 time.sleep(3)
                 self._band = addr
-                self.scan()                     # 再次进行扫描，以获取手环的佩戴状态信息
+                # self.scan()                     # 再次进行扫描，以获取手环的佩戴状态信息
                 return True, self._hvx
         self._hvx.clear()
         return False, None
