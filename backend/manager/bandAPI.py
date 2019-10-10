@@ -321,29 +321,30 @@ class bandAPI(object):
     # 手环监控健康数据
     def monitor(self, addr):
         logging.debug('bandAPI.monitor(%s).' %addr)
-        if self.connect(addr):
-            self.setTime()                  # 设置手环时间
-            time.sleep(1)
-            self.requestBattery()           # 请求获取手环电量信息
-            time.sleep(1)
-            self.requestHealth(True)        # 请求获取健康数据
-            time.sleep(1)
-
-            # 等待测量结果
-            for timeout in range(0, 120):
-                if self._reqeustHealth and self._connIsOk:
-                    time.sleep(1)
-                    logging.debug('band monitor wait: %ds.' %(timeout + 1))
-
-            # 获取测量结果后，断开连接
-            if self._connIsOk:
-                self.requestHealth(False)   # 关闭测量健康数据
+        for retry in range(0, 6):
+            if self.connect(addr):
+                self.setTime()                  # 设置手环时间
                 time.sleep(1)
-                self.disconnect()           # 断开连接
-            time.sleep(3)
-            self._band = addr
-            self.scan()                     # 再次进行扫描，以获取手环的佩戴状态信息
-            return True, self._hvx
+                self.requestBattery()           # 请求获取手环电量信息
+                time.sleep(1)
+                self.requestHealth(True)        # 请求获取健康数据
+                time.sleep(1)
+
+                # 等待测量结果
+                for timeout in range(0, 120):
+                    if self._reqeustHealth and self._connIsOk:
+                        time.sleep(1)
+                        logging.debug('band monitor wait: %ds.' %(timeout + 1))
+
+                # 获取测量结果后，断开连接
+                if self._connIsOk:
+                    self.requestHealth(False)   # 关闭测量健康数据
+                    time.sleep(1)
+                    self.disconnect()           # 断开连接
+                time.sleep(3)
+                self._band = addr
+                self.scan()                     # 再次进行扫描，以获取手环的佩戴状态信息
+                return True, self._hvx
         self._hvx.clear()
         return False, None
 
@@ -368,7 +369,7 @@ if __name__ == '__main__':
                 ret, hvx = api.monitor(mac)
                 if ret:
                     print(hvx)
-                time.sleep(60)
+                time.sleep(120)
             time.sleep(10)
     except KeyboardInterrupt:
         sys.exit(0)
