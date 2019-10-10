@@ -324,7 +324,9 @@ class serverFSM(object):
             if self._heartbeatFiniEvent.isSet():
                 raise Exception('fini')
             for retry in range(0, 6):
-                ret, playVer, confVer, softVer = self._serverAPI.heatbeat(playVer = self._playVer if self._playUpdated else None,
+                hvx = self._bandFSM.getHvx()
+                ret, playVer, confVer, softVer = self._serverAPI.heatbeat(hvx = hvx,
+                                                                          playVer = self._playVer if self._playUpdated else None,
                                                                           confVer = self._confVer if self._confUpdated else None)
                 if ret:
                     if playVer and playVer != self._playVer:

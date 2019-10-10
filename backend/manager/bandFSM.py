@@ -12,6 +12,7 @@ if __name__ == '__main__':
     sys.path.append('..')
 
 from utility import setLogging
+from utility import audioRecord
 from data_access import bracelet
 from manager.bandAPI import bandAPI
 
@@ -29,6 +30,7 @@ class bandFSM(object):
         self._bandAPI = bandAPI()
         self._mac = mac
         self._inv = inv
+        self._connected = False
 
         self._timerThread = None
         self._timerFiniEvent = threading.Event()
@@ -211,11 +213,20 @@ class bandFSM(object):
     # 手环监控线程
     def monitorThread(self, desc, event):
         logging.debug('bandFSM.monitorThread(%s).' %desc)
-        self._bandAPI.monitor(self._mac)
+        ret, _ = self._bandAPI.monitor(self._mac)
+        if ret:
+            if not self._connected:
+                self._connected = True
+                audioRecord.soundBandOk(True)
         if event:
             self.putEvent(desc, event)
         logging.debug('bandFSM.monitorThread(%s) fini.' %desc)
         self._monitorThread = None
+
+    # 获取手环测量健康数据
+    def getHvx(self):
+        logging.debug('bandFSM.getHvx().')
+        return self._bandAPI.getHvx()
 
     # 终止手环管理状态机
     def fini(self):

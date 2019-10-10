@@ -238,7 +238,7 @@ class serverAPI(object):
             return ret
 
     # 心跳同步
-    def heatbeat(self, playVer = None, confVer = None):
+    def heatbeat(self, hvx = None, playVer = None, confVer = None):
         ret, playUpdate, confUpdate, softUpdate = False, None, None, None
         logging.debug('serverAPI.heartbeat() start ...')
         try:
@@ -252,11 +252,18 @@ class serverAPI(object):
                         'data': [] }
             for person in self._personList:
                 data = {}
-                data['personId']     = person['personId']
-                data['systolicPre']  = person['systolicPre']
-                data['diastolicPre'] = person['diastolicPre']
-                data['heartRate']    = person['heartRate']
-                data['gps']          = self._gps
+                data['personId'] = person['personId']
+                data['systolicPre'] = 0
+                data['diastolicPre'] = 0
+                data['heartRate'] = 0
+                data['gps'] = self._gps
+                if hvx:
+                    if 'diastolicPre' in hvx:
+                        data['systolicPre'] = hvx['systolicPre']
+                    if 'diastolicPre' in hvx:
+                        data['diastolicPre'] = hvx['diastolicPre']
+                    if 'heartRate' in hvx:
+                        data['heartRate'] = hvx['heartRate']
                 payload['data'].append(data)
             if playVer:
                 payload['playVer'] = playVer
