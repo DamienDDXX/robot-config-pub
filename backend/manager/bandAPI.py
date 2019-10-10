@@ -55,6 +55,7 @@ class bandAPI(object):
     def __init__(self):
         self._cdll = cdll.LoadLibrary(BLE_LIBRARY_PATH)
         self._band = None
+        self._configured = False
 
         self._connIsOk = False
         self._connHandle = None
@@ -284,14 +285,26 @@ class bandAPI(object):
             tm   = time.localtime(time.time())
             tm32 = (((tm.tm_year - 2016) & 0x0F) << 26) + ((tm.tm_mon & 0x0F) << 22) + ((tm.tm_mday & 0x1F) << 17) + ((tm.tm_hour & 0x1F) << 12) + ((tm.tm_min & 0x3F) << 6) + ((tm.tm_sec & 0x3F) << 0)
             data = (c_ubyte * 20)()
-            data[0] = 0x26;
-            data[1] = 0x01;
-            data[2] = 0x00;
-            data[3] = 0x00;
+            data[0] = 0x26
+            data[1] = 0x01
+            data[2] = 0x00
+            data[3] = 0x00
             data[4] = (tm32 >> 24) & 0xFF
             data[5] = (tm32 >> 16) & 0xFF
             data[6] = (tm32 >>  8) & 0xFF
             data[7] = (tm32 >>  0) & 0xFF
+            self._cdll.us_ble_write(self._connHandle, pointer(data), 20)
+
+    # 设置定时心率血压测量设置
+    def setAutoHvx(self, inv):
+        logging.debug('bandAPI.setAutoHvx().')
+        if self._connIsOk:
+            data = (c_ubyte * 20)()
+            data[0] = 0x20
+            data[1] = 0x08
+            data[2] = 0x00
+            data[3] = 0x00
+            data[4] = inv & 0xFF
             self._cdll.us_ble_write(self._connHandle, pointer(data), 20)
 
     # 请求电量信息
@@ -321,30 +334,24 @@ class bandAPI(object):
     # 手环监控健康数据
     def monitor(self, addr):
         logging.debug('bandAPI.monitor(%s).' %addr)
-        for retry in range(0, 6):
-            if self.connect(addr):
-                self.setTime()                  # 设置手环时间
-                time.sleep(1)
-                self.requestBattery()           # 请求获取手环电量信息
-                time.sleep(1)
-                self.requestHealth(True)        # 请求获取健康数据
-                time.sleep(1)
-
-                # 等待测量结果
-                for timeout in range(0, 120):
-                    if self._reqeustHealth and self._connIsOk:
-                        time.sleep(1)
-                        logging.debug('band monitor wait: %ds.' %(timeout + 1))
-
-                # 获取测量结果后，断开连接
-                if self._connIsOk:
-                    self.requestHealth(False)   # 关闭测量健康数据
+        if not self._configured:
+            for retry in range(0, 6):
+                if self.connect(addr):
+                    self.setTime()              # 设置手环时间
                     time.sleep(1)
-                    self.disconnect()           # 断开连接
-                time.sleep(3)
-                self._band = addr
-                # self.scan()                     # 再次进行扫描，以获取手环的佩戴状态信息
-                return True, self._hvx
+                    self.setAutoHvx(5)          # 设置自动检测
+                    time.sleep(1)
+
+                    self._band = addr
+                    self._configured = True
+
+                    time.sleep(1)
+                    self.disconnect()
+                    break
+        if self._configured:
+            time.sleep(3)
+            self.scan()                     # 再次进行扫描，以获取手环的佩戴状态信息
+            return True, self._hvx
         self._hvx.clear()
         return False, None
 
