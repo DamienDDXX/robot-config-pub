@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 
+import os
 import platform
 from utility import robotId
 from manager import system
@@ -11,7 +12,7 @@ if platform.system().lower() == 'linux':
 
 
 def get_device_info():
-    return True, { 'seriesNumber': robotId.robotId() }
+    return True, { 'seriesNumber': robotId.robotId() + ' - ' + str(os.getpid()) }
 
 
 def restart_server():
