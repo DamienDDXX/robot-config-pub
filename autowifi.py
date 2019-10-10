@@ -15,7 +15,6 @@ def auto_wifi():
         try:
             fd = os.popen('ifconfig | grep 192')
             content = fd.read()
-            print(content)
             fd.close()
             if '192' not in content:
                 os.system('sudo ifup --force wlan0')
