@@ -155,7 +155,7 @@ class serverAPI(object):
                 logging.debug(json.dumps(js, indent = 4, ensure_ascii = False))
                 if 'code' in js and js['code'] == 0:
                     if js['data']['version']:
-                        ver = js['data']['version']
+                        ver = str(js['data']['version'])
                     if js['data']['url']:
                         url = js['data']['url']
                     ret = True
@@ -334,7 +334,7 @@ class serverAPI(object):
 ################################################################################
 # 测试程序
 if __name__ == '__main__':
-    api = serverAPI(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = 'b827eb319c88')
+    api = serverAPI(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = '001d432018eb')
     # 测试登录
     ret, _ = api.login()
     if ret:

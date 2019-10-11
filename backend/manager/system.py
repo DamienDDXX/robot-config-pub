@@ -17,7 +17,7 @@ from multiprocessing import Process
 _system = None
 
 # 初始化系统
-def init(robotId = 'b827eb319c88'):
+def init(robotId = '001d432018eb'):
     logging.debug('system.init().')
     global _system
     if not _system:

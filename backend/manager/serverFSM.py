@@ -137,6 +137,7 @@ class serverFSM(object):
         self._fsmDoneEvent = threading.Event()
         self._fsmThread = threading.Thread(target = self.fsmThread)
         self._fsmThread.start()
+        # self.updateInit()     # 启动检查软件更新线程
 
     # 登录服务器
     def actLogin(self):
@@ -330,7 +331,7 @@ class serverFSM(object):
                 self._updateFiniEvent.clear()
                 self._updateDoneEvent.clear()
                 curVer = version.getVersion()
-                ret, newVer, verUrl = self._serverAPI.getVersion()
+                ret, newVer, fileUrl = self._serverAPI.getVersion()
                 if ret:
                     if newVer != curVer:
                         raise 'update'
@@ -339,11 +340,44 @@ class serverFSM(object):
                     raise 'fini'
             except Exception, e:
                 if e.message == 'update':
-                    # 下载软件文件
+                    # 备份配置文件
+                    os.system("sudo cp ..\data_access\data.ini ~/data.ini")
 
-                    # TODO
-                    #   下载新的软件包
-                    #   解压安装
+                    curFName = 'robot-cfg-' + curVer
+                    newFName = 'robot-cfg-' + newVer
+
+                    # 下载新的软件
+                    filePath = os.path.join(self._updateDir, newFName)
+                    logging.debug('software path: %s' %filePath)
+                    if not os.path.isfile(filePath):
+                        logging.debug('download software: version - %s, url - %s' %(newVer, fileUrl))
+                        headers = { 'access_token': self._token }
+                        rsp = requests.get(fileUrl, headers = headers, stream = True, verify = False)
+                        logging.debug('download software: rsp.status_code - %d', rsp.status_code)
+                        if rsp.status_code == 200:
+                            chunks = 0
+                            while open(filePath, 'wb') as verFile:
+                                for chunk in rsp.iter_content(chunk_size = 1024):
+                                    if chunk:
+                                        if self._updateFiniEvent.isSet():
+                                            verFile.close()
+                                            os.remove(filePath)
+                                            raise Exception('fini')
+                                        chunks += 1
+                                        verFile.write(chunk)
+                            if chunks == 0:
+                                logging.debug('download software failed: url - %s, size = 0' %fileUrl)
+                                time.sleep(1)
+                                if os.path.isfile(filePath):
+                                    os.remove(filePath)
+                            else:
+                                logging.debug('download software done: url - %s' %fileUrl)
+
+                    # 新的软件下载成功
+                    if os.path.isfile(filePath):
+                        pass
+                        # 解压到根目录
+                        # 解压安装
                     pass
                 elif e.message == 'fini':
                     logging.debug('serverFSM.updateThread() fini.')
@@ -447,6 +481,7 @@ class serverFSM(object):
             self.loginFini()
             self.configFini()
             self.heatbeatFini()
+            self.updateFini()
 
             self._eventQueue.queue.clear()
             self._eventQueue = None
@@ -476,7 +511,7 @@ class serverFSM(object):
 # 测试程序
 if __name__ == '__main__':
     try:
-        fsm = serverFSM(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = 'b827eb319c88')
+        fsm = serverFSM(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = '001d432018eb')
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
