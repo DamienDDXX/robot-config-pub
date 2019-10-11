@@ -356,7 +356,7 @@ class serverFSM(object):
                         logging.debug('download software: rsp.status_code - %d', rsp.status_code)
                         if rsp.status_code == 200:
                             chunks = 0
-                            while open(filePath, 'wb') as verFile:
+                            with open(filePath, 'wb') as verFile:
                                 for chunk in rsp.iter_content(chunk_size = 1024):
                                     if chunk:
                                         if self._updateFiniEvent.isSet():
