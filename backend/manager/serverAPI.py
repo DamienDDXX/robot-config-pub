@@ -73,7 +73,7 @@ class serverAPI(object):
             try:
                 ret = False
                 loginUrl = self._hostName + ':' + self._portNumber + LOGIN_URL_POSTFIX
-                logging.debug('login: url - %s, loginToken - %s' %(loginUrl, loginToken))
+                logging.debug('login: url - %s, loginToken - %s, robotId - %s' %(loginUrl, loginToken, self._robotId))
                 headers = {
                         'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
                         'access_token': loginToken
