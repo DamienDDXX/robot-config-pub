@@ -15,6 +15,7 @@ if __name__ == '__main__':
 
 from utility import setLogging
 from utility import audioRecord
+from utility import version
 
 from manager.mp3FSM import mp3FSM
 from manager.lcdFSM import lcdFSM
@@ -62,6 +63,10 @@ class serverFSM(object):
         self._configThread = None
         self._configFiniEvent = threading.Event()
         self._configDoneEvent = threading.Event()
+
+        self._updateThread = None
+        self._updateFiniEvent = threading.Event()
+        self._updateDoneEvent = threading.Event()
 
         self._heartbeatThread = None
         self._heartbeatFiniEvent = threading.Event()
@@ -313,6 +318,51 @@ class serverFSM(object):
         if self._configThread:
             self._configFiniEvent.set()
             self._configDoneEvent.wait()
+
+    # 软件更新检测线程
+    #   间隔 30 分钟检测一次
+    def updateThread(self):
+        logging.debug('serverFSM.updateThread().')
+        loop = True
+        while loop:
+            try:
+                self._updateFiniEvent.clear()
+                self._updateDoneEvent.clear()
+                curVer = version.getVersion()
+                ret, newVer, verUrl = self._serverAPI.getVersion()
+                if ret:
+                    if newVer != curVer:
+                        raise 'update'
+                self._updateFiniEvent.wait(30 * 60)
+                if self._updateFiniEvent.isSet():
+                    raise 'fini'
+            except Exception, e:
+                if e.message == 'update':
+                    # TODO
+                    #   下载新的软件包
+                    #   解压安装
+                    pass
+                elif e.message == 'fini':
+                    logging.debug('serverFSM.updateThread() fini.')
+                    self._updateThread = None
+                    self._updateDoneEvent.set()
+                    loop = False
+            finally:
+                pass
+
+    # 开始软件更新检测
+    def updateInit(self):
+        logging.debug('serverFSM.updateInit().')
+        if not self._updateThread:
+            self._updateThread = threading.Thread(target = self.updateThread)
+            self._updateThread.start()
+
+    # 终止软件更新检测
+    def updateFini(self):
+        logging.debug('serverFSM.updateFini().')
+        if self._updateThread:
+            self._updateFiniEvent.set()
+            self._updateDoneEvent.wait()
 
     # 后台心跳同步处理
     #   如果失败，间隔 30s 后重新同步

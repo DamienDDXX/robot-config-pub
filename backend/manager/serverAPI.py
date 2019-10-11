@@ -26,6 +26,8 @@ MP3_LIST_URL_POSTFIX    = '/medical/robot/listMp3'          # 音频列表地址
 DOCTOR_LIST_URL_POSTFIX = '/medical/robot/listOnlineDoctor' # 在线医生列表地址
 CALL_LOG_URL_POSTFIX    = '/medical/robot/saveCallLog'      # 保存呼叫记录
 
+VERSION_URL_POSTFIX     = '/medical/basic/config/robot/version' # 获取机器人固件地址后缀
+
 # 服务器接口类
 class serverAPI(object):
     # 初始化
@@ -138,6 +140,32 @@ class serverAPI(object):
             logging.debug('serverAPI.getConfig() %s.' %('success' if ret else 'failed'))
             return ret, vsvrIp, vsvrPort, self._personList
 
+    # 获取机器人固件信息
+    def getVersion(self):
+        logging.debug('serverAPI.getVersion() start.')
+        ret, ver, url = False, None, None
+        try:
+            versionUrl = self._hostName + ':' + self._portNumber + VERSION_URL_POSTFIX
+            logging.debug('get version: url - %s, token - %s' %(versionUrl, self._token))
+            headers = { 'access_token': self._token }
+            rsp = requests.get(versionUrl, headers = headers, verify = False)
+            logging.debug('get version: rsp.status_code - %d', rsp.status_code)
+            if rsp.status_code == 200:
+                js = rsp.json()
+                logging.debug(json.dumps(js, indent = 4, ensure_ascii = False))
+                if 'code' in js and js['code'] == 0:
+                    if js['data']['version']:
+                        ver = js['data']['version']
+                    if js['data']['url']:
+                        url = js['data']['url']
+                    ret = True
+                    logging.debug('serverAPI.getVersion(): version = %s, url = %s' %(ver, url))
+        except:
+            traceback.print_exc()
+        finally:
+            logging.debug('serverAPI.getVersion() %s.' %('success' if ret else 'failed'))
+            return ret, ver, url
+
     # 获取音频列表
     def getMp3List(self):
         logging.debug('serverAPI.getMp3List() start.')
@@ -151,16 +179,17 @@ class serverAPI(object):
             if rsp.status_code == 200:
                 js = rsp.json()
                 logging.debug(json.dumps(js, indent = 4, ensure_ascii = False))
-                for index in range(len(js['data'])):
-                    if js['data'][index]['fileId']:
-                        mp3 = {
-                                'fileId':   js['data'][index]['fileId'],
-                                'fileName': js['data'][index]['fileName'],
-                                'pri':      js['data'][index]['pri']
-                                }
-                        mp3List.append(mp3)
-                        logging.debug('get mp3 list: mp3 %d - fileId = %s, fileName = %s, pri = %s' %(index + 1, mp3['fileId'], mp3['fileName'], mp3['pri']))
-                ret = True
+                if 'code' in js and js['code'] == 0:
+                    for index in range(len(js['data'])):
+                        if js['data'][index]['fileId']:
+                            mp3 = {
+                                    'fileId':   js['data'][index]['fileId'],
+                                    'fileName': js['data'][index]['fileName'],
+                                    'pri':      js['data'][index]['pri']
+                                    }
+                            mp3List.append(mp3)
+                            logging.debug('get mp3 list: mp3 %d - fileId = %s, fileName = %s, pri = %s' %(index + 1, mp3['fileId'], mp3['fileName'], mp3['pri']))
+                    ret = True
         except:
             traceback.print_exc()
         finally:
@@ -322,6 +351,9 @@ if __name__ == '__main__':
         ret, mp3List = api.getMp3List()
         if ret:
             print(mp3List)
+
+        # 测试获取版本号
+        ret, ver, url = api.getVersion()
 
         # 测试心跳同步
         ret, playUpdate, confUpdate, softUpdate = api.heatbeat()
