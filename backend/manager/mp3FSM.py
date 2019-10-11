@@ -18,9 +18,9 @@ if __name__ == '__main__':
     sys.path.append('..')
     from manager.serverAPI import serverAPI
     from manager.buttonAPI import buttonAPI
-    from utility import audioRecord, ramfs
+    from utility import audioRecord
 
-from utility import setLogging
+from utility import setLogging, ramfs
 
 __all__ = [
         'mp3FSM',
