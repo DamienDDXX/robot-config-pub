@@ -15,7 +15,7 @@ if __name__ == '__main__':
 
 from utility import setLogging
 from utility import audioRecord
-from utility import version
+from utility import version, ramfs
 
 from manager.mp3FSM import mp3FSM
 from manager.lcdFSM import lcdFSM
@@ -67,6 +67,7 @@ class serverFSM(object):
         self._updateThread = None
         self._updateFiniEvent = threading.Event()
         self._updateDoneEvent = threading.Event()
+        self._updateDir = ramfs.ramfsInit()
 
         self._heartbeatThread = None
         self._heartbeatFiniEvent = threading.Event()
@@ -338,6 +339,8 @@ class serverFSM(object):
                     raise 'fini'
             except Exception, e:
                 if e.message == 'update':
+                    # 下载软件文件
+
                     # TODO
                     #   下载新的软件包
                     #   解压安装

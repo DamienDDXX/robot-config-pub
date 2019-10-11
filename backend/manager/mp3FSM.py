@@ -18,7 +18,7 @@ if __name__ == '__main__':
     sys.path.append('..')
     from manager.serverAPI import serverAPI
     from manager.buttonAPI import buttonAPI
-    from utility import audioRecord
+    from utility import audioRecord, ramfs
 
 from utility import setLogging
 
@@ -27,19 +27,12 @@ __all__ = [
         ]
 
 # 常量定义
-if platform.system().lower() == 'windows':
-    MP3_DIR_ = os.getcwd()
-elif platform.system().lower() == 'linux':
-    MP3_DIR_ = '/ram'
-else:
-    raise NotImplementedError
-
 MP3_FILE_URL_POSTFIX = '/medical/basic/file/download'   # 音频文件地址后缀
 
 # 音频状态机管理类
 class mp3FSM(object):
     # 类初始化
-    def __init__(self, hostName, portNumber, token, getMp3List, mp3Dir = MP3_DIR_, lcdPlay = None, lcdIdle = None):
+    def __init__(self, hostName, portNumber, token, getMp3List, lcdPlay = None, lcdIdle = None):
         if platform.system().lower() == 'linux':
             # 挂载虚拟盘
             os.system('sudo mount -t tmpfs -o size=300m,mode=0777 tmpfs /ram')
@@ -52,7 +45,7 @@ class mp3FSM(object):
         self._lcdIdle = lcdIdle
         self._playList = []
         self._fileList = []
-        self._mp3Dir = MP3_DIR_
+        self._mp3Dir = ramfs.ramfsInit()
         self._sound = None
 
         self._playThread = None
@@ -226,11 +219,13 @@ class mp3FSM(object):
                                         for chunk in rsp.iter_content(chunk_size = 1024):
                                             if chunk:
                                                 if self._updateFiniEvent.isSet():
+                                                    mp3File.close()
+                                                    os.remove(filePath)
                                                     raise Exception('fini')
                                                 chunks += 1
                                                 mp3File.write(chunk)
                                     if chunks == 0:
-                                        logging.debug('download mp3 file filed: url - %s, size = 0' %fileUrl)
+                                        logging.debug('download mp3 file failed: url - %s, size = 0' %fileUrl)
                                         time.sleep(1)
                                         if os.path.isfile(filePath):
                                             os.remove(filePath)
