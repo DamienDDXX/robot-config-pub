@@ -37,6 +37,7 @@ class serverAPI(object):
         self._robotId = robotId
         self._token = None
         self._rbtId = None
+        self._https = True if 'https' in hostName else False
         self._personList = []
 
         _, settings = data_access.settings.get_settings()
@@ -334,7 +335,7 @@ class serverAPI(object):
 ################################################################################
 # 测试程序
 if __name__ == '__main__':
-    api = serverAPI(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = '001d432018eb')
+    api = serverAPI(hostName = 'http://111.12.194.250', portNumber = '80', robotId = '001d432018eb')
     # 测试登录
     ret, _ = api.login()
     if ret:

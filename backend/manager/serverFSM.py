@@ -511,7 +511,7 @@ class serverFSM(object):
 # 测试程序
 if __name__ == '__main__':
     try:
-        fsm = serverFSM(hostName = 'https://ttyoa.com', portNumber = '8098', robotId = '001d432018eb')
+        fsm = serverFSM(hostName = 'http://111.12.194.250', portNumber = '80', robotId = '001d432018eb')
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
